@@ -1,0 +1,2 @@
+# Handoff digests cover exact bytes; keep records stable across Windows/Unix checkouts.
+docs/agent-handoffs/*.json text eol=lf

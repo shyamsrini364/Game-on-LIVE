@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-AU">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game On! — Groups</title><link rel="stylesheet" href="/styles.css"><script src="/court.js" defer></script><script src="/ernie.js" defer></script><script src="/venue-shortlist.js" defer></script><script src="/venue-picker.js" defer></script><script src="/groups.js" defer></script></head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <a href="/" class="brand" aria-label="Game On home"><img src="/assets/brand.svg" alt="" width="52" height="42"><strong>Game On!</strong></a>
+    <nav aria-label="Main navigation"><a href="/">Home</a><a href="/groups.html">My groups</a></nav>
+  </header>
+<main id="main">
+<div id="flash" class="flash" role="status" hidden></div>
+<div class="eyebrow">Your people. Your pickleball.</div><h1 id="heading">Find your <em>crew.</em></h1><p id="groups-intro" class="intro">Good games start with good company.</p>
+<section id="join-entry" class="panel join-entry"><div><h2>Joining friends?</h2><p>Open the private invitation your organiser shared with you. A group code alone does not grant access.</p></div><a class="secondary" href="#restore-panel">Already joined? Restore access</a></section>
+<section id="saved-panel" class="panel"><h2>Groups on this device</h2><div id="saved-groups"></div></section>
+<section id="create-panel" class="panel">
+<h2>Create a group</h2>
+<form id="create-group"><label for="group-name">Group name</label><input id="group-name" required minlength="2" maxlength="75">
+<label for="creator-name">Your first name</label><input id="creator-name" required maxlength="45" autocomplete="given-name">
+<label for="creator-suburb">Your suburb</label><input id="creator-suburb" required minlength="2" maxlength="90" list="suburbs">
+<fieldset><legend>Your avatar</legend><div id="creator-avatar"></div><p class="small">Choose a character for this group's games. You can change it later.</p></fieldset>
+<p class="small">No account needed. Save your group code and private access key safely so you can restore access if you change phones.</p>
+<button class="primary" type="submit">Create group</button></form></section>
+<section id="invite-panel" class="panel" hidden>
+<h2 id="invite-heading">Join this group</h2><p class="small">Invitations grant membership, not management access.</p>
+<form id="join-group"><label for="join-name">Your first name</label><input id="join-name" required maxlength="45" autocomplete="given-name">
+<label for="join-suburb">Your suburb</label><input id="join-suburb" required minlength="2" maxlength="90" list="suburbs">
+<fieldset><legend>Your avatar</legend><div id="join-avatar"></div></fieldset>
+<fieldset><legend>Favourite venues (optional)</legend><div id="join-favourites"></div></fieldset>
+<button class="primary" type="submit">Join group</button></form></section>
+<section id="group-panel" class="panel" hidden>
+<section id="group-court" aria-label="Group membership"></section>
+<p id="group-code"></p><p id="group-role"></p>
+<h2>Members</h2><div id="members"></div>
+<h2>Games</h2><div id="games"></div><p><a id="create-game" href="/">Create a group game</a></p>
+<form id="profile"><h2>Your group profile</h2><label for="profile-name">First name</label><input id="profile-name" required maxlength="45">
+<label for="profile-suburb">Suburb</label><input id="profile-suburb" required minlength="2" maxlength="90" list="suburbs">
+<fieldset><legend>Your avatar</legend><div id="profile-avatar"></div><p class="small">Saved with your membership, including when you restore access on another device.</p></fieldset>
+<fieldset><legend>Your favourite venues</legend><div id="profile-favourites"></div></fieldset>
+<button class="primary" type="submit">Save my profile</button></form>
+<h3>Keep access to this group</h3><p class="small">Save your private credential in a password manager. Never share it in WhatsApp. It grants your role in this group; it is not an invitation.</p>
+<button id="backup" class="secondary">Copy my private access key</button>
+<button id="rotate-credential" class="secondary">Replace my credential</button>
+<p class="small">Replacing it invalidates old copies. Save the new one afterward.</p>
+</section>
+<section id="owner-panel" class="panel" hidden>
+<h2>Manage group</h2><form id="settings"><label for="settings-name">Group name</label><input id="settings-name" required minlength="2" maxlength="75">
+<fieldset><legend>Group favourite venues</legend><div id="group-favourites"></div></fieldset>
+<label class="vote-option"><input type="checkbox" id="restrict">Only recommend our group or players' favourites</label>
+<p class="small">Leave this unchecked to also find suitable alternatives.</p><button class="primary" type="submit">Save group settings</button></form>
+<h3>Invite your friends</h3><p>Share a link with your friends so they can join your pickleball group.</p><p class="small">Your invitation link works for 30 days. You can create a new one anytime. Friends who've already joined stay in your group.</p>
+<details id="manage-invitations"><summary>Manage invitations</summary><p class="small">Creating a new link replaces the old invitation. Revoking stops new joins; existing friends keep access.</p>
+<button id="new-invitation" class="secondary">Create a new invitation</button>
+<button id="revoke-invitation" class="secondary">Revoke invitation</button></details>
+<div id="invitation-output" hidden><label for="invitation-link">Share this invitation, not your private credential</label><input id="invitation-link" readonly>
+<button id="copy-invitation" class="secondary">Copy invitation link</button><button id="whatsapp-invitation" class="primary">Share on WhatsApp</button></div>
+</section>
+<section id="restore-panel" class="panel"><details id="restore-access"><summary>Already part of a group? Restore your access</summary><p>Changed phones or cleared your browser? Enter your group code and the private access key you saved when joining.</p><form id="restore-group">
+<label for="restore-code">Group code</label><input id="restore-code" required maxlength="32" placeholder="PICKLE-…">
+<label for="restore-token">Your saved private access key</label><input id="restore-token" type="password" required autocomplete="off" maxlength="128">
+<button class="secondary" type="submit">Restore my membership</button></form></details></section>
+<datalist id="suburbs"></datalist>
+</main><footer>Game On! by Agentdote · Made for your next rally</footer>
+</body></html>
