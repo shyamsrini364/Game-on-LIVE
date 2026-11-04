@@ -33,30 +33,42 @@ function selected(selector) { return pickers.get(selector).selected(); }
 function selectedAvatar(selector) { return $(selector).querySelector('input:checked')?.value || 'auto'; }
 function invitation(token) {
   $('#invitation-output').hidden = !token;
+  // Invitation tokens are only shown once, so after a reload the organiser creates a fresh link.
+  $('#new-invitation').textContent = token ? 'Create a new link' : 'Create invitation link';
+  // One primary action: invite while the crew is still forming, otherwise start a game.
+  const forming = (current?.members.length || 0) < 2;
+  $('#new-invitation').className = token ? 'text-button' : forming ? 'primary' : 'secondary';
+  $('#create-game').className = forming ? 'secondary' : 'primary';
   $('#invitation-link').value = token ? `${location.origin}/groups.html#code=${encodeURIComponent(current.code)}&invite=${encodeURIComponent(token)}` : '';
 }
-function listLinks(selector, items, href) {
+function listLinks(selector, items, href, {action = 'Open →', empty = 'None yet.'} = {}) {
   const root = $(selector); root.replaceChildren();
   for (const item of items) {
-    const p = document.createElement('p'), a = document.createElement('a'); a.href = href(item); a.textContent = item.title || item.name; p.append(a); root.append(p);
+    const a = document.createElement('a'); a.className = 'group-link'; a.href = href(item);
+    const name = document.createElement('strong'); name.textContent = item.title || item.name;
+    const go = document.createElement('span'); go.textContent = action;
+    a.append(name, go); root.append(a);
   }
-  if (!items.length) root.textContent = 'None yet.';
+  if (!items.length) { const p = document.createElement('p'); p.className = 'small'; p.textContent = empty; root.append(p); }
 }
+const gameListOptions = () => ({action: 'Open game →', empty: current?.me.role === 'owner' ? 'No games yet. Start one and offer a few times.' : 'No games yet. Your organiser will start one.'});
 async function loadGroup() {
   current = await api(`/api/groups/${encodeURIComponent(groupId)}`);
   credential.name = current.name; credential.code = current.code;
   localStorage.setItem(groupKey(groupId), JSON.stringify(credential));
-  $('#heading').textContent = current.name; $('#group-code').textContent = `Group code: ${current.code} (not a password)`;
-  $('#join-entry').hidden = true; $('#groups-intro').hidden = true;
+  $('#group-title').textContent = current.name; document.title = `${current.name} — Game On!`;
+  $('#group-code').textContent = `Group code: ${current.code} (not a password)`;
+  $('#groups-landing').hidden = true;
   GameOnUI.renderCourt($('#group-court'),current.members);
   let guide=$('#ernie-group');if(!guide){guide=document.createElement('aside');guide.id='ernie-group';$('#group-court').after(guide);}
-  Ernie.show(guide,'coach','Your group stays together across games. Join a game session to vote on times; group membership alone is not a vote.');
+  Ernie.show(guide,'coach','Your group stays together across games. Open a game to vote on times; joining the group alone isn’t a vote.');
   $('#group-role').textContent = `You are ${current.me.name}, ${current.me.role === 'owner' ? 'the organiser' : 'a member'}.`;
-  for (const id of ['create-panel', 'invite-panel', 'saved-panel']) $(`#${id}`).hidden = true;
+  for (const id of ['create-panel', 'invite-panel']) $(`#${id}`).hidden = true;
   $('#group-panel').hidden = false; $('#owner-panel').hidden = current.me.role !== 'owner';
   $('#create-game').hidden = current.me.role !== 'owner'; $('#create-game').href = `/?group=${encodeURIComponent(groupId)}`;
+  if ($('#invitation-output').hidden) invitation(null);
   $('#members').textContent = current.members.map(m => `${m.name}${m.role === 'owner' ? ' (organiser)' : ''}`).join(', ');
-  listLinks('#games', current.games, g => `/?game=${encodeURIComponent(g.id)}&group=${encodeURIComponent(groupId)}`);
+  listLinks('#games', current.games, g => `/?game=${encodeURIComponent(g.id)}&group=${encodeURIComponent(groupId)}`, gameListOptions());
   $('#profile-name').value = current.me.name; $('#profile-suburb').value = current.me.suburb;
   GameOnUI.avatarPicker($('#profile-avatar'),current.me.avatar_id,current.members.find(m=>m.id===current.me.id)?.avatar_seed);
   $('#settings-name').value = current.name; $('#restrict').checked = current.restrict_venues;
@@ -82,12 +94,12 @@ async function setup() {
   on('#create-group', 'submit', async () => {
     const result = await api('/api/groups', {name: $('#group-name').value, player_name: $('#creator-name').value, suburb: $('#creator-suburb').value, avatar_id: selectedAvatar('#creator-avatar')}, null);
     save(result, $('#group-name').value); await loadGroup(); invitation(result.invitation_token);
-    flash('Group created. Save your group code and private access key safely. Share only the invitation below.');
+    flash('Group created! Share the invitation link with your crew. Keep your private access key to yourself (see “Keep access to this group”).');
   });
   on('#join-group', 'submit', async () => {
     const result = await api('/api/invitations/join', {...pendingInvitation, name: $('#join-name').value, suburb: $('#join-suburb').value, favourites: selected('#join-favourites'), avatar_id: selectedAvatar('#join-avatar')}, null);
     sessionStorage.removeItem('gameon-pending-invitation'); pendingInvitation = null;
-    save(result, 'Group'); await loadGroup(); flash('You joined the group. Save your group code and private access key in a password manager so you can restore access later.');
+    save(result, 'Group'); await loadGroup(); flash('You’re in! Save your private access key (under “Keep access to this group”) so you can get back in on another device.');
   });
   on('#profile', 'submit', async () => { await api(`/api/groups/${groupId}/me`, {name: $('#profile-name').value, suburb: $('#profile-suburb').value, favourites: selected('#profile-favourites'), avatar_id: selectedAvatar('#profile-avatar')}); await loadGroup(); flash('Your profile is saved for this group’s games.'); });
   on('#settings', 'submit', async () => { await api(`/api/groups/${groupId}/settings`, {name: $('#settings-name').value, favourites: selected('#group-favourites'), restrict_venues: $('#restrict').checked}); await loadGroup(); flash('Group settings saved.'); });
@@ -99,7 +111,7 @@ async function setup() {
   on('#rotate-credential', 'click', async () => {
     const result = await api(`/api/groups/${groupId}/credential`, {});
     credential.member_token = result.member_token; localStorage.setItem(groupKey(groupId), JSON.stringify(credential));
-    flash('Old credential invalidated. Copy and save your new credential now.');
+    flash('Your old key no longer works. Copy and save your new key now.');
   });
   on('#restore-group', 'submit', async () => {
     const token = $('#restore-token').value.trim();
@@ -122,14 +134,14 @@ async function setup() {
       }
     }
     const preview = await api('/api/invitations/preview', pendingInvitation, null);
-    $('#create-panel').hidden = true; $('#invite-panel').hidden = false; $('#invite-heading').textContent = `Join ${preview.name}`;
+    $('#groups-landing').hidden = true; $('#create-panel').hidden = true; $('#invite-panel').hidden = false; $('#invite-heading').textContent = `You’re invited to ${preview.name}`;
   } else {
     const saved = [];
     for (let i=0; i<localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key.startsWith('gameon-group:')) { try { saved.push({id:key.slice('gameon-group:'.length), name: JSON.parse(localStorage.getItem(key)).name || 'Group'}); } catch (_) {} }
     }
-    listLinks('#saved-groups', saved, g => `/groups.html?group=${encodeURIComponent(g.id)}`);
+    listLinks('#saved-groups', saved, g => `/groups.html?group=${encodeURIComponent(g.id)}`, {action: 'Open group →', empty: 'No groups on this device yet. Create one, or open an invitation from a friend.'});
   }
 }
 setup().catch(e => flash(e.message));
@@ -140,6 +152,6 @@ setInterval(async () => {
     const latest=await api(`/api/groups/${encodeURIComponent(groupId)}`);
     GameOnUI.renderCourt($('#group-court'),latest.members);
     $('#members').textContent=latest.members.map(m=>`${m.name}${m.role==='owner'?' (organiser)':''}`).join(', ');
-    listLinks('#games',latest.games,g=>`/?game=${encodeURIComponent(g.id)}&group=${encodeURIComponent(groupId)}`);
+    listLinks('#games',latest.games,g=>`/?game=${encodeURIComponent(g.id)}&group=${encodeURIComponent(groupId)}`,gameListOptions());
   } catch (_) { flash('Group updates are unavailable. Refresh or restore access to try again.'); }
 },10000);

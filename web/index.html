@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0B2D56">
+  <meta name="theme-color" content="#0B2C50">
   <title>Game On! — Pickleball with friends</title>
   <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/assets/brand.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css">
   <script src="/court.js" defer></script>
   <script src="/ernie.js" defer></script>
   <script src="/vendor/maplibre/maplibre-gl-csp.js" defer></script>
-<script src="/venue-view.js" defer></script>
+  <script src="/venue-view.js" defer></script>
   <script src="/venue-shortlist.js" defer></script>
   <script src="/venues.js" defer></script>
   <script src="/app.js" defer></script>
@@ -18,116 +18,175 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="topbar">
-    <a href="/" class="brand" aria-label="Game On home"><img src="/assets/brand.svg" alt="" width="52" height="42"><strong>Game On!</strong></a>
+    <a href="/" class="brand" aria-label="Game On home"><img src="/assets/brand.svg" alt="" width="52" height="42"><strong>Game On<span>!</span></strong></a>
     <nav aria-label="Main navigation"><a href="/">Home</a><a href="/groups.html">My groups</a></nav>
   </header>
   <main id="main">
     <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
-    <section id="create-view" class="view" hidden>
+
+    <!-- Home: groups first. Games are started from inside a group. -->
+    <section id="home-view" class="view" hidden>
       <div class="home-hero">
-        <div class="hero-copy"><div class="eyebrow">Pickleball · Melbourne · Your people</div>
-        <h1>Rally your<br><em>crew.</em></h1>
-        <p class="intro">Less group-chat chaos.<br>More time on court.</p>
-        <div class="hero-actions"><a class="primary" href="/groups.html#create-panel">Create a group <span aria-hidden="true">↗</span></a><a class="secondary" href="/groups.html#join-entry">Join your crew</a></div>
-        <p class="hero-note">Pick a time. Find a venue. Make a plan together.</p></div>
-        <div class="hero-art" aria-hidden="true"><div class="hero-court"><i></i><b></b></div><img class="hero-ball" src="/assets/brand.svg" alt=""><span class="court-caption">YOUR NEXT RALLY STARTS HERE</span></div>
+        <div class="hero-copy">
+          <div class="eyebrow">Less organising. More playing.</div>
+          <h1>From “let’s play” to <em>Game&nbsp;on!</em></h1>
+          <p class="intro">Bring your friends together, find a time that works and choose a pickleball court in Melbourne.</p>
+          <div class="hero-actions"><a class="primary" href="/groups.html#create-panel">Create a group</a><a class="secondary" href="/groups.html#join-entry">Join a group</a></div>
+        </div>
+        <img class="hero-art" src="/assets/court/court-crew.webp" width="1400" height="700" alt="Illustrated pickleball court with four smiling players">
       </div>
+      <section id="home-groups" class="panel welcome-panel" hidden>
+        <div class="eyebrow">Welcome back</div>
+        <h2>Your groups on this device</h2>
+        <div id="home-group-list" class="group-list"></div>
+      </section>
+      <ol class="how-it-works" aria-label="How Game On! works">
+        <li><strong>Gather your crew</strong><span>Create a group and share one invitation link.</span></li>
+        <li><strong>Find a time</strong><span>Offer a few start times. Everyone ticks what works.</span></li>
+        <li><strong>Choose a court</strong><span>Compare venues on the map. Ernie can suggest the fairest one.</span></li>
+        <li><strong>Game on</strong><span>Take your plan to the venue to book. You stay in control.</span></li>
+      </ol>
       <aside id="ernie-welcome"></aside>
-      <div class="section-heading"><div><div class="eyebrow">Just one game?</div><h2>Start with a time.</h2></div><span class="pill">No account needed</span></div>
-      <div class="panel creation-panel">
-        <h2 id="create-heading">Create a game</h2>
-        <p id="group-context" class="small" hidden></p>
-        <form id="create-form">
-          <label for="game-format">Game format</label>
-          <select id="game-format" aria-describedby="game-format-help" required>
-            <option value="4" selected>Doubles (4 players)</option>
-            <option value="2">Singles (2 players)</option>
-          </select>
-          <p id="game-format-help" class="small">The format sets the minimum players needed. More friends can still join and vote.</p>
-          <label for="game-duration">Game duration</label>
-          <select id="game-duration" required>
-            <option value="60">60 minutes</option>
-            <option value="90" selected>90 minutes</option>
-            <option value="120">120 minutes</option>
-          </select>
-          <div class="section-heading"><label>Suggested starting times (Melbourne time)</label></div>
-          <p class="small">Offer 2 to 6 different starting times so friends have a choice. The game duration applies to each option.</p>
-          <div id="time-inputs" class="time-inputs"></div>
-          <button type="button" id="add-time" class="secondary">+ Add another time</button>
-          <button type="submit" class="primary full" id="create-submit">Create game →</button>
-        </form>
-      </div>
-      <p class="footnote">No account needed. <a href="/groups.html">Create or join a reusable group</a>, or organise a standalone game here.</p>
     </section>
 
+    <!-- Start a game (group organisers only). -->
+    <section id="create-view" class="view" hidden>
+      <div class="form-layout">
+        <div class="form-art">
+          <div class="eyebrow">A plan everyone can say yes to</div>
+          <h1>Start with a time.<br>We’ll find the overlap.</h1>
+          <img src="/assets/court/court-crew-800.webp" width="800" height="400" alt="">
+          <p class="small">Offer two to six start times. Your crew votes, then you choose a court once a time works.</p>
+        </div>
+        <div class="panel creation-panel">
+          <div id="group-context" class="eyebrow" hidden></div>
+          <h2 id="create-heading">Put a game in play</h2>
+          <form id="create-form">
+            <div class="field-row">
+              <div><label for="game-format">Format</label>
+              <select id="game-format" aria-describedby="game-format-help" required>
+                <option value="4" selected>Doubles (4 players)</option>
+                <option value="2">Singles (2 players)</option>
+              </select></div>
+              <div><label for="game-duration">Duration</label>
+              <select id="game-duration" required>
+                <option value="60">60 minutes</option>
+                <option value="90" selected>90 minutes</option>
+                <option value="120">120 minutes</option>
+              </select></div>
+            </div>
+            <p id="game-format-help" class="small">The format sets the minimum players. More friends can still join and vote.</p>
+            <label>Start times · Melbourne time</label>
+            <div id="time-inputs" class="time-inputs"></div>
+            <button type="button" id="add-time" class="text-button">+ Add another time</button>
+            <button type="submit" class="primary full" id="create-submit">Create game</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game workspace. -->
     <section id="game-view" class="view" hidden>
-      <div class="eyebrow">Game session</div>
-      <h1 id="game-heading">Let's play.</h1>
-      <p id="game-duration-label" class="small"></p>
-      <section id="session-court" aria-label="Session participation"></section>
-      <div id="progress-panel" class="game-progress">
-        <div class="section-heading"><h2>Group progress</h2><span id="player-count" class="pill">0 players</span></div>
-        <div id="status" class="status"></div>
-        <div id="player-list" class="people"></div>
-        <h3>Best times so far</h3>
-        <div id="rankings" class="rankings"></div>
-        <p id="next-step" class="next-step"></p>
-      </div>
-      <div class="game-share" aria-label="Share this game">
-        <div class="share-actions">
-          <button id="whatsapp" class="secondary" type="button">Share on WhatsApp</button>
-          <button id="copy-link" class="secondary" type="button">Copy link</button>
+      <header class="game-header">
+        <div>
+          <div class="eyebrow" id="game-eyebrow">Your next game</div>
+          <h1 id="game-heading">Let’s get your crew on court.</h1>
+          <p id="game-duration-label" class="meta"></p>
         </div>
-        <p id="share-note" class="footnote">Anyone with this session link can join. Share it only with your group. Localhost links only work on your computer.</p>
-      </div>
-
-      <div class="panel" id="join-panel">
-        <h2>Join the game</h2>
-        <p class="small">Only your first name and suburb are needed — no street address.</p>
-        <form id="join-form">
-          <label for="player-name">Your name</label>
-          <input id="player-name" maxlength="45" autocomplete="given-name" required placeholder="Your first name">
-          <label for="player-suburb">Your suburb</label>
-          <input id="player-suburb" maxlength="90" required placeholder="e.g. Berwick">
-          <button type="submit" class="primary full">Join game →</button>
-        </form>
-      </div>
-
-      <div class="panel" id="vote-panel" hidden>
-        <div class="section-heading"><h2 id="greeting">Your availability</h2><span class="pill">Select all that work</span></div>
-        <p class="small">Choose every time you can make it. You can change your vote later.</p>
-        <form id="vote-form">
-          <div id="vote-times" class="vote-times"></div>
-          <button type="submit" class="primary full">Save my availability</button>
-        </form>
-      </div>
-
-      <div class="panel" id="venues-panel">
-        <h2>Pick a court</h2>
-        <p class="small">Explore before everyone votes. Availability and prices are not checked.</p>
-        <div id="venue-discovery"></div>
-        <h3>Recommendations for your game</h3>
-        <p class="small">Game recommendations require a qualifying shared time.</p>
-        <p id="venue-status" class="small">Waiting for a shared time.</p>
-        <p id="venue-time" class="small"></p>
-        <div id="venue-results"></div>
-        <p class="footnote">Availability not checked. No reservation has been made. Distances use suburb reference points, not driving routes or exact court entrances. Same-suburb distance can be zero.</p>
-      </div>
-      <div class="panel" id="handoff-panel" hidden>
-        <aside id="ernie-booking"></aside>
-        <h2>Booking Handoff</h2>
-        <p id="handoff-summary"></p>
-        <p id="handoff-status" role="status"></p>
-        <p>Provider availability and total price not checked. No provider-confirmed booking. Game On! cannot verify a booking reference.</p>
-        <p class="small">Selecting this venue approves an enquiry for the displayed time and players. Your saved venue restriction is included. Changes, reservations and payment need your approval.</p>
-        <div class="share-actions">
-          <button id="handoff-open" class="primary" type="button">Book on venue website</button>
-          <button id="handoff-copy" class="secondary" type="button">Copy instructions for my AI assistant</button>
+        <div class="game-share" aria-label="Share this game">
+          <div class="share-actions">
+            <button id="whatsapp" class="secondary" type="button"><span aria-hidden="true">↗</span> WhatsApp</button>
+            <button id="copy-link" class="secondary" type="button">Copy link</button>
+          </div>
         </div>
-        <p id="handoff-missing" class="small" hidden>No trusted booking page is listed. Use the official website in the instructions to contact the venue.</p>
-        <label for="handoff-brief">Review instructions (no player details or private links)</label>
-        <textarea id="handoff-brief" rows="12" readonly></textarea>
-        <p class="footnote">Rechecked before opening or copying. A copied brief is a snapshot: recheck the group plan before booking. Selection is cleared on reload.</p>
+      </header>
+      <ol id="game-steps" class="steps" aria-label="Game progress">
+        <li data-step="crew"><span class="step-num">1</span><span>Gather your crew</span></li>
+        <li data-step="time"><span class="step-num">2</span><span>Find a time</span></li>
+        <li data-step="court"><span class="step-num">3</span><span>Choose a court</span></li>
+        <li data-step="booked"><span class="step-num">4</span><span>Game on</span></li>
+      </ol>
+      <p id="share-note" class="footnote share-note">Anyone with this link can join. Share it only with your crew.</p>
+
+      <div class="workspace">
+        <div class="workspace-side">
+          <section id="session-court" aria-label="Who's playing"></section>
+
+          <div class="panel" id="join-panel">
+            <h2>Join the game</h2>
+            <p class="small">Just your first name and suburb. No street address.</p>
+            <form id="join-form">
+              <label for="player-name">Your first name</label>
+              <input id="player-name" maxlength="45" autocomplete="given-name" required placeholder="Your first name">
+              <label for="player-suburb">Your suburb</label>
+              <input id="player-suburb" maxlength="90" required placeholder="e.g. Berwick">
+              <button type="submit" class="primary full">Join game</button>
+            </form>
+          </div>
+
+          <div class="panel" id="vote-panel" hidden>
+            <h2 id="greeting">When can you play?</h2>
+            <p class="small">Tick every time that works for the full game. You can change this later.</p>
+            <form id="vote-form">
+              <div id="vote-times" class="vote-times"></div>
+              <button type="submit" class="primary full">Save availability</button>
+            </form>
+          </div>
+
+          <aside id="ernie-game" class="ernie-tip"></aside>
+
+          <div id="progress-panel" class="panel game-progress">
+            <div class="section-heading"><h2>Times so far</h2><span id="player-count" class="pill">0 joined</span></div>
+            <div id="status" class="status"></div>
+            <div id="rankings" class="rankings"></div>
+            <p id="next-step" class="next-step"></p>
+            <details class="who-details"><summary>Who’s in</summary><div id="player-list" class="people"></div></details>
+          </div>
+        </div>
+
+        <div class="workspace-main">
+          <div class="panel" id="handoff-panel" hidden>
+            <aside id="ernie-booking"></aside>
+            <div class="section-heading"><h2>Booking handoff</h2><span class="pill pill-warn">Not booked</span></div>
+            <h3 id="handoff-venue" class="handoff-venue"></h3>
+            <dl class="handoff-summary">
+              <div><dt>When · Melbourne</dt><dd id="handoff-when"></dd></div>
+              <div><dt>Format</dt><dd id="handoff-format"></dd></div>
+              <div><dt>Players</dt><dd id="handoff-players"></dd></div>
+            </dl>
+            <p id="handoff-summary" class="visually-hidden"></p>
+            <p id="handoff-status" role="status"></p>
+            <p class="notice">Game On! hasn’t checked availability or the total price, and nothing is reserved. Approving this venue means you’re happy to enquire with it.</p>
+            <div class="share-actions">
+              <button id="handoff-open" class="primary" type="button">Visit booking website <span aria-hidden="true">↗</span></button>
+              <button id="handoff-copy" class="secondary" type="button">Copy instructions for my AI assistant</button>
+            </div>
+            <p id="handoff-missing" class="small" hidden>No trusted booking page is listed. Use the official website in the instructions to contact the venue.</p>
+            <details class="brief-details">
+              <summary>Review the instructions</summary>
+              <label for="handoff-brief" class="small">No player names or private links are included.</label>
+              <textarea id="handoff-brief" rows="10" readonly></textarea>
+              <p class="footnote">We recheck the plan before opening or copying. A copied brief is a snapshot, so recheck the group plan before you book.</p>
+            </details>
+          </div>
+
+          <div class="panel" id="venues-panel">
+            <div class="section-heading"><h2>Pick a court</h2><span id="venue-mode" class="pill">Explore anytime</span></div>
+            <div id="venue-discovery"></div>
+            <p class="notice venue-notice"><strong>Before you go:</strong> Game On! doesn’t check court availability or prices, and nothing is booked here. Distances are straight-line from suburb centres, and dashed pins are approximate locations.</p>
+            <section id="recommendations" class="recommendations" aria-labelledby="recommendations-heading">
+              <h3 id="recommendations-heading">Suggested for your game</h3>
+              <p id="venue-status" class="small">Suggestions appear once everyone has voted and a time works.</p>
+              <p id="venue-time" class="small"></p>
+              <div id="ernie-ask" class="ernie-card" hidden>
+                <img src="/assets/ernie/player-v3.webp" width="72" height="48" alt="">
+                <div><strong>A little help from Ernie?</strong><span class="small">Ernie compares your saved venues and travel for everyone.</span></div>
+                <button id="ask-ernie" class="primary" type="button">Ask Ernie to plan</button>
+              </div>
+              <div id="venue-results"></div>
+            </section>
+          </div>
+        </div>
       </div>
     </section>
   </main>

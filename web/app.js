@@ -12,6 +12,8 @@ let playerIdentity = null;
 let selectedHandoff = null;
 let recommendationRevision = null;
 let handoffBusy = false;
+let currentReady = false;
+let groupName = '';
 const SLOT_LIMIT = 6;
 
 function flash(message) {
@@ -34,6 +36,9 @@ function buttonBusy(btn, busy) { btn.disabled = busy; }
 function localIdentityKey() { return `gameon-player:${gameId}`; }
 function timeLabel(iso) {
   return new Intl.DateTimeFormat('en-AU', {timeZone: 'Australia/Melbourne', weekday:'short', day:'numeric', month:'short', hour:'numeric', minute:'2-digit', hour12:true}).format(new Date(iso));
+}
+function clockLabel(iso) {
+  return new Intl.DateTimeFormat('en-AU', {timeZone: 'Australia/Melbourne', hour:'numeric', minute:'2-digit', hour12:true}).format(new Date(iso));
 }
 function appendTimeInput(value = '') {
   if ($all('.time-row').length >= SLOT_LIMIT) return;
@@ -97,7 +102,10 @@ function renderVotes(game, saved = []) {
     label.className = 'vote-option';
     const check = document.createElement('input');
     check.type = 'checkbox'; check.value = slot.id; check.checked = saved.includes(slot.id);
-    const span = document.createElement('span'); span.textContent = timeLabel(slot.starts_at);
+    const span = document.createElement('span');
+    const when = document.createElement('strong'); when.textContent = timeLabel(slot.starts_at);
+    const range = document.createElement('small'); range.textContent = `${clockLabel(slot.starts_at)}–${clockLabel(slot.ends_at || new Date(new Date(slot.starts_at).getTime() + game.duration_minutes * 60000).toISOString())}`;
+    span.append(when, range);
     label.append(check, span);
     root.append(label);
   }
@@ -117,6 +125,8 @@ async function restorePlayer() {
     $('#vote-panel').hidden = false;
     $('#greeting').textContent = `${player.name}, when can you play?`;
     renderVotes(currentGame, player.slot_ids);
+    updateVoteButton();
+    renderSteps();
   } catch(e) {
     localStorage.removeItem(localIdentityKey()); playerIdentity = null;
   }
@@ -145,31 +155,34 @@ async function vote(event) {
       method: 'POST', body: JSON.stringify({...playerIdentity, slot_ids})
     });
     await refresh();
-    const original = button.textContent;
     button.textContent = 'Saved ✓';
-    setTimeout(() => { button.textContent = original; }, 1500);
+    setTimeout(updateVoteButton, 1500);
   } catch(e) { flash(e.message); }
   finally { buttonBusy(button, false); }
 }
 function renderGame(game) {
   currentGame = game;
   const futureReady = game.status === 'ready' && game.ranking.some(r => r.available_count >= game.min_players && new Date(game.slots.find(s=>s.id===r.slot_id).starts_at)>new Date());
+  currentReady = futureReady;
   GameOnUI.renderCourt($('#session-court'),game.players,{game:true,ready:futureReady,minPlayers:game.min_players});
   let guide = $('#ernie-game');
   if (!guide) { guide = document.createElement('aside'); guide.id='ernie-game'; $('#session-court').after(guide); }
   Ernie.game(guide,game,futureReady);
-  $('#game-heading').textContent = game.title;
-  const format = game.min_players === 2 ? 'Singles' : game.min_players === 4 ? 'Doubles' : 'Game';
-  $('#game-duration-label').textContent = `${format} · ${game.min_players} players minimum · ${game.duration_minutes} minutes per proposed session`;
-  $('#player-count').textContent = `${game.players.length} / ${game.min_players}+ joined`;
+  $('#game-eyebrow').textContent = groupName ? `${groupName} · your next game` : 'Your next game';
+  $('#game-heading').textContent = futureReady ? 'A time works. Let’s find a court.' : 'Let’s get your crew on court.';
+  document.title = `${game.title || 'Your game'} — Game On!`;
+  const format = game.min_players === 2 ? 'Singles' : game.min_players === 4 ? 'Doubles' : `${game.min_players}+ players`;
+  const span = dateSpan(game.slots);
+  $('#game-duration-label').textContent = [span, format, `${game.duration_minutes} minutes`, 'All times Melbourne'].filter(Boolean).join(' · ');
+  $('#player-count').textContent = `${game.players.length} joined`;
   const status = $('#status');
   status.className = 'status' + (futureReady ? ' ready' : '');
-  status.textContent = futureReady ? '✓ Enough players share a time — ready to look for courts.' : game.status === 'ready' ? 'The shared times have passed. Propose a new future time.' :
-    game.status === 'waiting_for_responses' ? 'Waiting for players or votes.' : 'No common time yet — propose new options.';
+  status.textContent = futureReady ? '✓ Enough players share a time. Time to choose a court.' : game.status === 'ready' ? 'The shared times have passed. The organiser can start a new game with future times.' :
+    game.status === 'waiting_for_responses' ? 'Waiting for players to join and vote.' : 'No shared time yet. The organiser can start a new game with other times.';
   const people = $('#player-list'); people.replaceChildren();
   for (const p of game.players) {
     const chip = document.createElement('div'); chip.className = 'person';
-    chip.textContent = `${p.has_voted ? '✓' : '○'} ${p.name} · ${p.suburb} ${p.has_voted ? '' : '(not voted)'}`;
+    chip.textContent = `${p.has_voted ? '✓' : '○'} ${p.name} · ${p.suburb}${p.has_voted ? '' : ' · not voted yet'}`;
     people.append(chip);
   }
   const ranks = $('#rankings'); ranks.replaceChildren();
@@ -178,13 +191,47 @@ function renderGame(game) {
     const row = document.createElement('div'); row.className = 'rank';
     const left = document.createElement('div');
     const heading = document.createElement('strong'); heading.textContent = timeLabel(slot.starts_at);
-    const detail = document.createElement('small'); detail.textContent = result.available_names.join(', ') || 'No one selected this time yet';
+    const detail = document.createElement('small'); detail.textContent = result.available_names.join(', ') || 'No one yet';
     left.append(heading, detail);
     const score = document.createElement('span'); score.className = 'score';
-    score.textContent = `${result.available_count}/${game.min_players} needed`;
+    score.textContent = `${result.available_count} of ${game.min_players}`;
     row.append(left, score); ranks.append(row);
   }
   $('#next-step').textContent = game.explanation;
+  updateVoteButton();
+  renderSteps();
+}
+function dateSpan(slots) {
+  if (!slots?.length) return '';
+  const day = iso => new Intl.DateTimeFormat('en-AU', {timeZone: 'Australia/Melbourne', day:'numeric', month:'short'}).format(new Date(iso));
+  const sorted = slots.map(s => s.starts_at).sort();
+  const first = day(sorted[0]), last = day(sorted[sorted.length - 1]);
+  return first === last ? first : `${first} – ${last}`;
+}
+function updateVoteButton() {
+  const button = $('#vote-form button');
+  if (!button || button.textContent === 'Saved ✓') return;
+  const me = currentGame?.players.find(p => p.id === playerIdentity?.player_id);
+  const voted = Boolean(me?.has_voted);
+  button.textContent = voted ? 'Update availability' : 'Save availability';
+  button.className = `${voted ? 'secondary' : 'primary'} full`;
+}
+// The stepper reflects saved server state only: players joined, a qualifying time, then an organiser handoff.
+function renderSteps() {
+  if (!currentGame) return;
+  const enough = currentGame.players.length >= currentGame.min_players;
+  const current = selectedHandoff ? 'booked' : currentReady ? 'court' : enough ? 'time' : 'crew';
+  const order = ['crew', 'time', 'court', 'booked'];
+  for (const item of $all('#game-steps li')) {
+    const index = order.indexOf(item.dataset.step), active = order.indexOf(current);
+    item.classList.toggle('done', index < active);
+    item.classList.toggle('active', index === active);
+    if (index === active) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
+  }
+  // One primary action: share while gathering the crew (once you have joined and voted), otherwise the step's own action.
+  const me = currentGame.players.find(p => p.id === playerIdentity?.player_id);
+  $('#whatsapp').className = current === 'crew' && me?.has_voted ? 'primary' : 'secondary';
+  $('#venue-mode').textContent = currentReady ? 'For your shared time' : 'Explore anytime';
 }
 async function refresh() {
   if (!gameId) return;
@@ -209,8 +256,10 @@ function renderRecommendations(result) {
   root.dataset.renderKey=renderKey;
   const viewState = window.VenueView?.capture(root);
   VenueView.dispose(root);root.replaceChildren();
-  $('#venue-status').textContent = result.explanation;
-  $('#venue-time').textContent = result.slot_starts_at ? `For ${timeLabel(result.slot_starts_at)}` : '';
+  $('#venue-status').textContent = result.recommendations.length ? 'Ranked by fair travel for everyone and your saved favourites.' : result.explanation;
+  $('#venue-time').textContent = result.slot_starts_at ? `For ${timeLabel(result.slot_starts_at)}, ${result.duration_minutes} minutes` : '';
+  $('#recommendations-heading').textContent = result.recommendations.length ? `Suggested for your game (${result.recommendations.length})` : 'Suggested for your game';
+  $('#ernie-ask').hidden = !(result.can_prepare_handoff && result.status === 'recommended' && result.recommendations.length);
   let venueGuide=$('#ernie-venues');
   if(!venueGuide){venueGuide=document.createElement('aside');venueGuide.id='ernie-venues';root.before(venueGuide);}
   Ernie.show(venueGuide,'planner',result.recommendations.length ? `${result.recommendations.length} venue suggestions for ${result.duration_minutes} minutes. Compare preferences and approximate distances; availability and prices still need checking.` : result.explanation);
@@ -218,20 +267,21 @@ function renderRecommendations(result) {
     const card = document.createElement('article'); card.className = 'venue-card'; card.dataset.venueId = recommendation.venue.id;
     const title = document.createElement('h3'); title.textContent = `${recommendation.venue.name} · ${recommendation.venue.suburb}`;
     const address = document.createElement('p'); address.className = 'small'; address.textContent = recommendation.venue.address;
-    const favourite = document.createElement('p'); favourite.className = 'small';
+    const favourite = document.createElement('p'); favourite.className = 'venue-tags';
     favourite.textContent = [recommendation.group_preferred ? 'Group favourite' : '',
-      recommendation.individual_preference_count ? `Preferred by ${recommendation.individual_preference_count} player(s)` : ''].filter(Boolean).join(' · ') || 'Alternative venue';
+      recommendation.individual_preference_count ? `Preferred by ${recommendation.individual_preference_count} player${recommendation.individual_preference_count === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ') || 'Alternative venue';
     const distance = document.createElement('p'); distance.className = 'small';
-    distance.textContent = `Approximate average: ${recommendation.average_distance_km.toFixed(1)} km · Longest: ${recommendation.longest_distance_km.toFixed(1)} km (straight-line)`;
-    const reason = document.createElement('p'); reason.className = 'small'; reason.textContent = recommendation.reason;
-    const availability = document.createElement('p'); availability.textContent = 'Availability not checked';
+    distance.textContent = `About ${recommendation.average_distance_km.toFixed(1)} km on average · ${recommendation.longest_distance_km.toFixed(1)} km for the furthest player`;
+    const reason = document.createElement('details'); reason.className = 'small why';
+    const why = document.createElement('summary'); why.textContent = 'Why it’s suggested';
+    const reasonText = document.createElement('p'); reasonText.textContent = recommendation.reason; reason.append(why, reasonText);
     const link = document.createElement('a'); link.href = recommendation.venue.booking_url || recommendation.venue.website_url;
-    link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Check with venue / booking website';
-    const source = document.createElement('p'); source.className = 'small'; source.textContent = `Identity source checked ${recommendation.venue.checked_on}.`;
-    card.append(title, address, favourite, distance, reason, availability, link, source); root.append(card);
+    link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Venue website ↗';
+    const source = document.createElement('p'); source.className = 'small source-line'; source.textContent = `Venue details checked ${recommendation.venue.checked_on}`;
+    card.append(title, address, favourite, distance, reason, link, source); root.append(card);
     if (result.can_prepare_handoff) {
       const select = document.createElement('button'); select.type = 'button'; select.className = 'secondary handoff-select';
-      select.textContent = 'Select venue for booking handoff';
+      select.textContent = 'Choose this venue';
       select.disabled = handoffBusy;
       select.onclick = () => selectHandoff({revision: result.revision, slot_id: result.slot_id, venue_id: recommendation.venue.id});
       card.append(select);
@@ -239,15 +289,16 @@ function renderRecommendations(result) {
   }
   if (!result.can_prepare_handoff && result.recommendations.length) {
     const note = document.createElement('p'); note.className = 'small';
-    note.textContent = groupId ? 'Only the group organiser can prepare a booking handoff.' : 'Create a reusable group for organiser-approved booking handoffs. Standalone voting and venue links still work.';
+    note.textContent = groupId ? 'Your organiser chooses the venue and takes the plan to the venue to book.' : 'Booking handoffs are for groups. Voting and venue links still work here.';
     root.append(note);
   }
-  window.VenueView?.enhance(root, result, viewState, selectHandoff);
+  window.VenueView?.enhance(root, result, viewState, selectHandoff, null, {listOnly: true});
 }
 function clearHandoff() {
   selectedHandoff = null;
   $('#handoff-panel').hidden = true;
   $('#handoff-brief').value = '';
+  renderSteps();
 }
 function setHandoffBusy(busy) {
   handoffBusy = busy;
@@ -261,7 +312,13 @@ function renderHandoff(data) {
   selectedHandoff = data.selection;
   $('#handoff-panel').hidden = false;
   $('#handoff-summary').textContent = `${data.venue_name} · ${timeLabel(data.starts_at)} to ${timeLabel(data.ends_at)} (Melbourne) · ${data.duration_minutes} minutes · ${data.player_count} players available (${data.session_player_count} joined)`;
-  $('#handoff-status').textContent = data.selection.proposal ? 'Venue approved for enquiry. Availability and booking remain unverified.' : 'Suggested venue selected. No reservation made.';
+  $('#handoff-venue').textContent = data.venue_name;
+  $('#handoff-when').textContent = `${timeLabel(data.starts_at)}–${clockLabel(data.ends_at)}`;
+  const format = currentGame?.min_players === 2 ? 'Singles' : currentGame?.min_players === 4 ? 'Doubles' : 'Game';
+  $('#handoff-format').textContent = `${format} · ${data.duration_minutes} min`;
+  $('#handoff-players').textContent = `${data.player_count} available of ${data.session_player_count} joined`;
+  $('#handoff-status').textContent = data.selection.proposal ? 'Venue approved for enquiry. Not booked yet.' : 'Venue chosen. Not booked yet.';
+  renderSteps();
   $('#handoff-brief').value = data.brief;
   $('#handoff-open').hidden = !data.booking_url;
   $('#handoff-missing').hidden = Boolean(data.booking_url);
@@ -292,13 +349,13 @@ async function useHandoff(action) {
       if (!data.booking_url) throw new Error('No trusted booking page is listed. Select a venue again.');
       if (!popup) throw new Error('Allow a new tab in your browser, then select the venue and try again.');
       popup.location.replace(data.booking_url);
-      $('#handoff-status').textContent = 'External booking started — venue website opened. Availability and booking remain unconfirmed.';
+      $('#handoff-status').textContent = 'Venue website opened in a new tab. Not booked until the venue confirms.';
     } else {
       try {
         await navigator.clipboard.writeText(data.brief);
-        $('#handoff-status').textContent = 'Instructions copied. No reservation made; booking remains unconfirmed.';
+        $('#handoff-status').textContent = 'Instructions copied. Not booked until the venue confirms.';
       } catch (_) {
-        $('#handoff-brief').focus(); $('#handoff-brief').select();
+        $('.brief-details').open = true; $('#handoff-brief').focus(); $('#handoff-brief').select();
         $('#handoff-status').textContent = 'Clipboard unavailable. Copy the selected instructions manually. No reservation made.';
       }
     }
@@ -306,15 +363,39 @@ async function useHandoff(action) {
   finally { setHandoffBusy(false); }
 }
 async function copyShareLink() {
-  try { await navigator.clipboard.writeText(location.href); $('#copy-link').textContent = 'Copied ✓'; }
+  try { await navigator.clipboard.writeText(location.href); $('#copy-link').textContent = 'Copied ✓'; setTimeout(() => { $('#copy-link').textContent = 'Copy link'; }, 2000); }
   catch(_) { window.prompt('Copy this session link:', location.href); }
 }
 function whatsappShare() {
   const text = `🏓 ${currentGame.title}\nPick the times you can play and enter your suburb:\n${location.href}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
 }
+function savedGroups() {
+  const saved = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith('gameon-group:')) continue;
+      try { saved.push({id: key.slice('gameon-group:'.length), name: JSON.parse(localStorage.getItem(key))?.name || 'Your group'}); } catch (_) {}
+    }
+  } catch (_) {}
+  return saved;
+}
+function renderHome() {
+  $('#home-view').hidden = false;
+  Ernie.show($('#ernie-welcome'),'player','Hey! Ready to rally your crew? Create a group, invite your friends, then choose times together.');
+  const saved = savedGroups(), list = $('#home-group-list');
+  $('#home-groups').hidden = !saved.length;
+  list.replaceChildren();
+  for (const group of saved) {
+    const link = document.createElement('a'); link.className = 'group-link';
+    link.href = `/groups.html?group=${encodeURIComponent(group.id)}`;
+    const name = document.createElement('strong'); name.textContent = group.name;
+    const go = document.createElement('span'); go.textContent = 'Open group →';
+    link.append(name, go); list.append(link);
+  }
+}
 async function setup() {
-  Ernie.show($('#ernie-welcome'),'player','Hey! Ready to rally your crew? Create a reusable group, invite your friends, then choose times together.');
   $('#create-form').addEventListener('submit', createGame);
   $('#add-time').addEventListener('click', () => appendTimeInput());
   $('#join-form').addEventListener('submit', joinGame);
@@ -323,15 +404,18 @@ async function setup() {
   $('#whatsapp').addEventListener('click', whatsappShare);
   $('#handoff-open').addEventListener('click', () => useHandoff('open'));
   $('#handoff-copy').addEventListener('click', () => useHandoff('copy'));
+  $('#ask-ernie').addEventListener('click', () => Ernie.openPlanner());
+  // Home is groups-first: games start from inside a group. Older standalone game links still open below.
+  if (!gameId && !groupId) { renderHome(); return; }
   if (groupId) {
     try {
       const group = await api(`/api/groups/${encodeURIComponent(groupId)}`);
-      $('#create-heading').textContent = `Create a game for ${group.name}`;
-      $('.home-hero').hidden = true;
-      $('#group-context').hidden = false; $('#group-context').textContent = 'This session is private to group members.';
+      $('#create-heading').textContent = 'Put a game in play';
+      groupName = group.name;
+      $('#group-context').hidden = false; $('#group-context').textContent = group.name;
       $('#player-name').value = group.me.name; $('#player-suburb').value = group.me.suburb;
       $('#player-name').readOnly = true; $('#player-suburb').readOnly = true;
-      $('#share-note').textContent = 'This session link works for existing group members. Ask the organiser for a group invitation if you have not joined. Localhost links only work on this computer.';
+      $('#share-note').textContent = 'This link works for members of the group. Friends who haven’t joined need the group invitation first.';
     } catch(e) { flash(e.message + ' Open My groups to restore access.'); return; }
   }
   if (!gameId) {

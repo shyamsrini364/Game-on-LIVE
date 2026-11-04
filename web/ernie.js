@@ -5,12 +5,12 @@ window.Ernie = {
     if (this.widget) return;
     const widget = document.createElement('aside');
     widget.className = 'ernie-widget';
-    widget.innerHTML = `<button class="ernie-launcher" aria-expanded="false" aria-controls="ernie-chat" aria-label="Chat with Ernie · AI assistant"><img src="/assets/ernie/player-v3.png" alt=""><span>Ernie <small>AI assistant</small></span></button>
+    widget.innerHTML = `<button class="ernie-launcher" aria-expanded="false" aria-controls="ernie-chat" aria-label="Chat with Ernie · AI assistant"><img src="/assets/ernie/player-v3.webp" alt="" width="64" height="43"><span>Ernie <small>AI assistant</small></span></button>
       <section id="ernie-chat" role="dialog" aria-labelledby="ernie-title" hidden>
         <header><div><strong id="ernie-title">Ernie · AI assistant</strong><small>Let's get your crew on court</small></div><button class="ernie-close" aria-label="Close Ernie chat">×</button></header>
         <p class="ernie-disclosure">Built-in help, not model-generated chat. I can help with Game On! steps, but can't check live availability or book courts.</p>
 
-        <div class="ernie-conversation"><div class="erne-planning" hidden><button type="button" class="primary erne-plan">Ernie, find the best court for us</button><p class="small">Local planning uses deterministic decisions and real game tools. Live model planning is not enabled.</p><div class="erne-plan-result" role="status" aria-live="polite"></div></div><div class="ernie-context"></div><div class="ernie-messages" role="log" aria-label="Conversation with Ernie" aria-live="polite" aria-relevant="additions"></div></div>
+        <div class="ernie-conversation"><div class="erne-planning" hidden><button type="button" class="primary erne-plan">Ernie, find the best court for us</button><details class="small erne-mode"><summary>How Ernie plans</summary><p>Ernie uses your real game data and fixed rules to compare venues. Live AI model planning is not switched on here.</p></details><div class="erne-plan-result" role="status" aria-live="polite"></div></div><div class="ernie-context"></div><div class="ernie-messages" role="log" aria-label="Conversation with Ernie" aria-live="polite" aria-relevant="additions"></div></div>
         <div class="ernie-questions"><button type="button">What next?</button><button type="button">How do I vote?</button><button type="button">Help with venues</button></div>
         <form class="ernie-form"><label for="ernie-question">Ask about your game</label><div><input id="ernie-question" maxlength="500" autocomplete="off" placeholder="How can I invite friends?"><button type="submit">Send</button></div></form>
       </section>`;
@@ -135,12 +135,25 @@ window.Ernie = {
   },
   show(root, persona, message) {
     if (!root) return;
-    this.init(); root.hidden = true; root.replaceChildren();
+    this.init(); root.replaceChildren();
+    // Tips marked .ernie-tip show inline beside the step; other contexts only feed the chat.
+    if (root.classList.contains('ernie-tip') && message) {
+      root.hidden = false;
+      const img = document.createElement('img'); img.src = '/assets/ernie/player-v3.webp'; img.alt = ''; img.width = 96; img.height = 64;
+      const bubble = document.createElement('p'); bubble.textContent = message;
+      root.append(img, bubble);
+    } else root.hidden = true;
     this.contexts.set(root.id, {root, message}); this.renderContext();
+  },
+  openPlanner() {
+    this.init();
+    const chat = this.widget.querySelector('#ernie-chat');
+    if (chat.hidden) this.widget.querySelector('.ernie-launcher').click();
+    this.widget.querySelector('.erne-plan')?.focus();
   },
   game(root, game, ready) {
     const voted = game.players.filter(p => p.has_voted).length, pending = game.players.length - voted;
-    const message = ready ? 'A future time meets your player minimum. Review venue suggestions, then check actual availability with the venue.' : pending ? `${voted} of ${game.players.length} players have voted. ${pending} still need to respond. Choose every proposed start time that works for the full ${game.duration_minutes} minutes.` : game.players.length < game.min_players ? `You have ${game.players.length} players joined. Invite enough friends to reach ${game.min_players}, then compare their times.` : 'No qualifying future time yet. Ask the organiser to propose new options.';
+    const message = ready ? 'A time works for enough of you. Pick a court on the map, or ask me to suggest the fairest one.' : game.players.length < game.min_players ? `${game.players.length} of ${game.min_players} players are in. Share the game link to bring your crew together.` : pending ? `${voted} of ${game.players.length} players have voted. Waiting on ${pending} more. You can explore courts while you wait.` : 'Everyone has voted, but no time works for enough players yet. The organiser can start a new game with other times.';
     this.show(root, 'assistant', message);
   }
 };
