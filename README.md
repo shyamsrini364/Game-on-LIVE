@@ -10,13 +10,15 @@ Built for Week 3 of *Mastering Agentic AI* (Maven, The Gen Academy) by Shyam Sri
 | --- | --- | --- | --- |
 | <img src="docs/screenshots/home.png" width="180"> | <img src="docs/screenshots/map.png" width="180"> | <img src="docs/screenshots/ernie.png" width="180"> | <img src="docs/screenshots/court.png" width="180"> |
 
+More screens (390 px phone and 1280 px desktop) live in [`docs/screenshots/`](docs/screenshots/): `home-*`, `group-*`, `join-*`, `start-game-*`, `game-workspace-*`, `game-waiting-*` and `game-handoff-*`. The UI follows the "Balanced Companion" concept: compact crew and availability on the left, a wide court map on the right, and Ernie on hand when needed.
+
 ## The problem
 
 Organising a game of doubles over WhatsApp takes dozens of messages: who's free, when, where, who books, how much. Game On! turns that into one link and one decision.
 
 ## How it works
 
-1. **Create:** the organiser offers 2 to 6 start times (60, 90 or 120 minutes, Melbourne time). No account needed.
+1. **Create a group, then a game:** the organiser creates a reusable group (no account needed), then starts a game with 2 to 6 start times (60, 90 or 120 minutes, Melbourne time). Games are started from inside a group; older standalone game links still open.
 2. **Share:** one link goes to the group chat. Reusable groups keep the same crew and favourite venues.
 3. **Vote:** friends tick every slot that works. The page updates live, and a game is *ready* once everyone has voted and at least four players share a time.
 4. **Ernie, find us a court:** Ernie plans over the real game data and a verified directory of 29 Victorian pickleball venues, then proposes the venue that is fairest on travel for the group.
