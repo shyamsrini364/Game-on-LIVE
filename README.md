@@ -2,7 +2,9 @@
 
 **Less group-chat chaos. More time on court.** A self-contained, fictional demonstration of a bounded LangGraph agent helping a Melbourne pickleball group choose a court and reach a human-controlled booking handoff.
 
-Public deployment verification is in progress. The final verified URL will be recorded here after hosted acceptance.
+**Open the public demo: https://game-on-w3-demo.vercel.app**
+
+Verified without login on 6 November 2026 (Australia/Sydney). Separate Vercel project `game-on-w3-demo`; no application environment variables or database connection.
 
 ## Try the demo
 
