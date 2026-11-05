@@ -90,3 +90,5 @@ Scenario B's first empty observation synchronises a Court evidence notice: **0 a
 ![B: mobile replay](docs/screenshots/brain-B-375.png)
 
 Rollback for this visualisation: restore public commit `bbc00e5cc2237970e3089583140be50014b943b1` in a new commit and deploy only `game-on-w3-demo`. This retains the initial fictional demo.
+
+Hosted Agent Brain acceptance (6 November 2026): all 3 backend tests passed in Vercel worker mode. Both browser suites passed against the public URL at 1280/375px: A/B/C replay and A/B/C/B/A full journey/reset, actual map tiles, keyboard controls, reduced-motion context, clipboard/calendar and approval preservation. Replay generated zero new planning/approval requests. Official booking navigation was intercepted; no real provider booking interaction was performed. Screenshots above were captured from the hosted demo. Build was Ready and error-level runtime query returned no logs.
