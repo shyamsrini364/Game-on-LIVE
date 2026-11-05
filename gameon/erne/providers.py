@@ -29,7 +29,7 @@ class DeterministicTestProvider:
                         request.eligible_slot_ids.index(option.arguments.slot_id))
             if option.tool == 'rank_venues':
                 return (3, 0)
-            if option.tool == 'discover_courts':
+            if option.tool in ('discover_courts', 'get_court_options', 'prepare_checkout'):
                 return (3 if option.reason_code == 'retry_transient' else 2,
                         request.eligible_slot_ids.index(option.arguments.slot_id))
             return (5 if option.outcome == 'human_handoff' else 4, 0)

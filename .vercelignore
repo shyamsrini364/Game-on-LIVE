@@ -1,17 +1,6 @@
 .git
-.env*
 .venv
 .local
-/data
+.env*
 tests
 docs
-__pycache__
-**/__pycache__
-# Internal development artifacts are not runtime inputs.
-development-analytics
-scripts
-design
-.agents
-.codex
-AGENTS.md
-LEARNING_CHECKPOINT.md

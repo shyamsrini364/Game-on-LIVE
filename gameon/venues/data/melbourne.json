@@ -11,7 +11,7 @@
       "source_url": "https://en.wikipedia.org/wiki/Wantirna_South,_Victoria"
     },
     "website_url": "https://www.leveluppickleball.com.au/",
-    "booking_url": "https://book.leveluppickleball.com.au/",
+    "booking_url": "https://www.leveluppickleball.com.au/book",
     "booking_provider": "Playbypoint",
     "provider_evidence_url": "https://book.leveluppickleball.com.au/users/sign_in",
     "sources": [
@@ -39,7 +39,7 @@
       "source_url": "https://en.wikipedia.org/wiki/Clayton,_Victoria"
     },
     "website_url": "https://www.pickleholic.com.au/",
-    "booking_url": "https://book.pickleholic.com.au/home",
+    "booking_url": "https://book.pickleholic.com.au/book/Pickleholic",
     "booking_provider": "Playbypoint",
     "provider_evidence_url": "https://book.pickleholic.com.au/users/sign_in",
     "sources": [

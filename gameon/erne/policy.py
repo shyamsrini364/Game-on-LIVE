@@ -4,7 +4,7 @@ from .contracts import ActionOption, ReadInput, ScheduleInput, DiscoveryInput, D
 from .tools import eligible_slots
 
 
-def permitted_options(state, request, discovery_configured, venue_mode=False):
+def permitted_options(state, request, discovery_configured, venue_mode=False, browser=None):
     snapshot, schedule = state['snapshot'], state['schedule']
     history = state['observations']
     refs = tuple(e.evidence_id for e in history)
@@ -16,7 +16,7 @@ def permitted_options(state, request, discovery_configured, venue_mode=False):
             kind='tool' if tool else 'finish', tool=tool, arguments=arguments, action=action,
             reason=reason, reason_code=code, outcome=outcome, evidence_ids=refs,
             effect='read_only' if tool else 'return_to_caller',
-            simulated=tool == 'discover_courts' or any(e.simulated for e in history)))
+            simulated=tool in ('discover_courts', 'prepare_checkout') or (tool == 'get_court_options' and (browser is None or browser.live_observations is None)) or any(e.simulated for e in history)))
 
     def help_option(code='human_help'):
         add(action='REQUEST_HELP', outcome='human_handoff', code=code,
@@ -42,6 +42,9 @@ def permitted_options(state, request, discovery_configured, venue_mode=False):
         add(action='REQUEST_ALTERNATIVES', outcome='alternatives_requested', code='no_eligible_time', reason='No future proposed time is eligible. Request alternative times.')
     elif not discovery_configured:
         add(action='PROCEED_TO_DISCOVERY', outcome='discovery_ready', code='eligible_time', reason='An eligible time exists; no discovery adapter is configured. No live availability was checked.')
+    elif browser is not None:
+        from .playbypoint_policy import browser_options
+        browser_options(state, request, eligible, browser, add, help_option)
     elif venue_mode:
         from .venue_policy import venue_options
         venue_options(state, request, eligible, add, help_option)

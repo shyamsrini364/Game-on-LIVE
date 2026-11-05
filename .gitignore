@@ -1,9 +1,7 @@
+.venv/
 __pycache__/
 *.pyc
-.venv/
-data/*.sqlite3*
-.env
-.env.*
-!.env.example
+.env*
 .vercel/
 .local/
+.vercel

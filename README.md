@@ -1,99 +1,78 @@
-# Game On! 🏓 Live
+# Game On! — Week 3 agentic planning demo
 
-**Less group-chat chaos. More time on court.**
+**Less group-chat chaos. More time on court.** A self-contained, fictional demonstration of a bounded LangGraph agent helping a Melbourne pickleball group choose a court and reach a human-controlled booking handoff.
 
-Game On! is a small pickleball organiser for Melbourne friend groups. An organiser proposes a few times and shares one link. Friends join with a first name and suburb and vote for every slot that works. Once enough people overlap, **Ernie**, the app's agent, finds the fairest court for the group and prepares a booking brief, and a human approves before anything is booked.
+Public deployment verification is in progress. The final verified URL will be recorded here after hosted acceptance.
 
-Built for Week 3 of *Mastering Agentic AI* (Maven, The Gen Academy) by Shyam Srinivas, as an Agentdote prototype.
+## Try the demo
 
-| Home | Pick a court | Ernie's proposal | Live court |
-| --- | --- | --- | --- |
-| <img src="docs/screenshots/home.png" width="180"> | <img src="docs/screenshots/map.png" width="180"> | <img src="docs/screenshots/ernie.png" width="180"> | <img src="docs/screenshots/court.png" width="180"> |
+No account, database setup or API key is required.
 
-More screens (390 px phone and 1280 px desktop) live in [`docs/screenshots/`](docs/screenshots/): `home-*`, `group-*`, `join-*`, `start-game-*`, `game-workspace-*`, `game-waiting-*` and `game-handoff-*`. The UI follows the "Balanced Companion" concept: compact crew and availability on the left, a wide court map on the right, and Ernie on hand when needed.
+1. Select a scenario in **Demo Studio** and click **Run Ernie**.
+2. Open **See what Ernie did** to inspect the completed execution record.
+3. Compare the court cards/map, then **Approve & continue** to the fictional handoff.
+4. Copy a privacy-safe brief to a personal assistant or download a tentative calendar event.
+5. Switch scenarios or **Reset** to start over. Each visitor's browser state is independent.
 
-## The problem
+| Scenario | Simulated provider response | Actual graph behaviour |
+|---|---|---|
+| A — Successful recommendation | Courts found for the first agreed time | Reads group, calculates shared times, calls discovery, returns recommendation |
+| B — Unavailable court → replan | First agreed time returns empty; second returns a court | Observes the empty result, makes another decision and executes a second discovery call for the other already-approved time |
+| C — Human assistance required | Both permitted searches return empty | Exhausts bounded alternatives and asks for human help; no approval is offered |
 
-Organising a game of doubles over WhatsApp takes dozens of messages: who's free, when, where, who books, how much. Game On! turns that into one link and one decision.
+Alex and Sam are fictional people who approved both displayed times. B does **not** silently invent a new time. Scenario dates roll forward to future Melbourne evenings so the scheduler's expiry safeguards remain active.
 
-## How it works
+## What is genuinely agentic?
 
-1. **Create a group, then a game:** the organiser creates a reusable group (no account needed), then starts a game with 2 to 6 start times (60, 90 or 120 minutes, Melbourne time). Games are started from inside a group; older standalone game links still open.
-2. **Share:** one link goes to the group chat. Reusable groups keep the same crew and favourite venues.
-3. **Vote:** friends tick every slot that works. The page updates live, and a game is *ready* once everyone has voted and at least four players share a time.
-4. **Ernie, find us a court:** Ernie plans over the real game data and a verified directory of 29 Victorian pickleball venues, then proposes the venue that is fairest on travel for the group.
-5. **Approve and book:** the organiser approves, compares alternatives, or says not now. Approval produces a booking brief for the venue's site or a personal AI assistant. Nothing is reserved or paid automatically.
+This runs the actual LangGraph **decide → tool → observe → decide** loop, with the existing validated tool contracts, policy gate, maximum six decisions, maximum two discovery attempts, five-second tool limit and twenty-second run deadline. A killable worker enforces the deadline. The visible timeline is projected from completed trace events and validated observations, not a timer or prerecorded animation.
 
-## Ernie: the agent
+The decision provider is deterministic. There are **no LLM calls**, paid or otherwise. Inventory and prices are explicit simulated fixtures. The second tool call in B is an actual execution chosen after observing failure; changing the fixture response changes the graph outcome. This is a controlled agent-workflow demonstration, not proof of live AI reasoning or live court access.
 
-Ernie is a bounded **LangGraph** decide → act → observe loop.
+## Architecture and isolation
 
 ```text
-Organiser: "Ernie, find the best court for us"
-        │
-        ▼
- Frozen game snapshot (no names, no credentials)
-        │
-        ▼
- ┌──────────── LangGraph loop (max 6 decisions, 20 s deadline) ────────────┐
- │  decide ──► tool ──► observe ──► decide …                               │
- │  tools: read_game · schedule_game · search_pickleball_venues · rank_venues│
- └──────────────────────────────────────────────────────────────────────────┘
-        │
-        ▼
- Grounded proposal: players · time · duration · venue · distance
-        │
-        ▼
- Human choice: Approve / Compare alternatives / Not now
-        │
-        ▼
- Server revalidates (signed 10-minute receipt, current votes) ──► booking brief
+Browser Demo Studio → FastAPI allowlisted scenario
+  → immutable fictional in-memory group
+  → bounded LangGraph worker + simulated provider observations
+  → validated results + safe activity projection
+  → I-065 court/map/comparison/pricing UI
+  → explicit demo approval (server revalidates outcome)
+  → copy / tentative calendar / official website link
 ```
 
-Design choices:
+No Neon, SQLite, authentication state, persistent group store, shared writable database or cross-request run registry. Each request reconstructs the fixtures. The worker uses only private short-lived IPC; it has no database credentials. FastAPI mounts only `web/`, not application source or configuration. Requests cannot choose tools, URLs, model modes, prices or provider credentials. The approval endpoint accepts only a successful scenario's allowed court/time and returns **not_booked**. Two concurrent graph executions per instance are allowed; excess requests receive a retryable busy response. This is not a global distributed rate limiter.
 
-- **Tools are real, decisions are bounded.** The model can only choose among permitted, fully bound actions. Scheduling, search and ranking are deterministic Python, so a model cannot invent a venue, time or availability claim.
-- **Two modes.** The web app runs a deterministic policy by default. An OpenAI-compatible provider adapter plugs into the same graph, and a live evaluation batch (9 calls, about US$0.02) was compared against the deterministic choices.
-- **Human in the loop.** Approval means "approved to enquire", never "booked". Any vote change invalidates the proposal.
-- **Privacy.** Players share a suburb, never an address. Booking briefs carry no names, links or credentials.
+Frontend components reuse the navy/teal/lime Concept C design: compact court/total badges, lime approval panel, responsive map and avatar markers, comparison, personal-assistant copy, tentative `.ics`, and manual unavailable-court/time recovery. Group setup/login are intentionally replaced with fixed fictional participants and votes. **Review group availability** displays those fixture votes; editing or adding real votes is outside this demo.
 
-## Venue directory
+MapLibre uses attributed OpenFreeMap/OpenStreetMap tiles without a key. Tile loading requires internet access; the existing failure/retry view remains available. Venue identities/addresses come from the curated directory. Simulated prices are generated fixture values scoped to the chosen court/time and include fictional fees; they are neither live quotes nor promises. The total is per court, divided using currency-safe rounding for two fictional participants.
 
-29 source-verified pickleball venues across Greater Melbourne and regional Victoria (`gameon/venues/data/melbourne.json`), each with sources, a checked date and an honest location precision (venue pin vs suburb reference). Venues are ranked by geographic fairness: the average and longest straight-line distance across players.
+The Playbypoint [reference skill](.agents/skills/playbypoint-booking/SKILL.md) and safe parser/tool source are included for educational review. No public route instantiates browser automation. Playwright is a development-test dependency only, not deployed. Paid inference is disabled in the demo provider module.
 
-## Tech stack
+## Screenshots
 
-- **Backend:** Python 3.13, FastAPI, SQLite locally or Neon PostgreSQL hosted, deployed on Vercel (Sydney).
-- **Frontend:** vanilla HTML, CSS and JavaScript. No build step.
-- **Map:** MapLibre GL with keyless OpenFreeMap tiles.
-- **Agent:** LangGraph and Pydantic (optional `requirements-agent.txt`).
-- **Tests:** 206 unit and API tests (PostgreSQL tests skip without a test database).
+| Desktop | Mobile | Human help |
+|---|---|---|
+| ![Successful scenario](docs/screenshots/A-1280.png) | ![Mobile result](docs/screenshots/A-375.png) | ![No alternatives](docs/screenshots/C-375.png) |
 
-## Run it locally
+## Run and test locally
 
-```bash
-python -m pip install -r requirements.txt
-python app.py            # http://localhost:8000
+```sh
+python -m venv .venv
+# Activate your virtual environment, then:
+python -m pip install -r requirements-dev.txt
+python app.py
+# Open http://localhost:8020
+python -m unittest discover -s tests -p test_demo.py
+python -m playwright install chromium
+python tests/browser_smoke.py http://localhost:8020 --live-map
 ```
 
-Tests:
+For an already installed Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to its executable path. Setting `VERCEL=1` when running the unit suite exercises the dedicated serverless subprocess launcher. The browser suite runs A/B/C/B/A and Reset at 1280/375 pixels, uses the real HTTP application and graph, and verifies comparison, approval, clipboard privacy, calendar and overflow. It never performs provider booking actions.
 
-```bash
-python -m pip install -r requirements-dev.txt -r requirements-agent.txt
-python -m unittest discover -s tests
-```
+## Boundaries and rollback
 
-## What's next
+Nothing is reserved, held, paid or emailed. Opening an official website is ordinary navigation: court/time may need reselection, and the user must independently verify current availability and price. During the demo, stop before any provider action that might create a hold or booking. Calendar events are tentative, and copied instructions explicitly require user confirmation before booking/payment. Provider checkout URLs are not claimed transferable.
 
-- **Court prices:** "From $X/hr" with a checked date for each venue.
-- **Live availability:** 11 of the 15 bookable venues use Playbypoint, so one authorised read-only integration covers most of them, labelled *Not checked / Available / Full*.
-- **Send to Hark:** hand the booking brief to a personal AI assistant that checks live slots and price, then books after the organiser approves.
-- **Player map:** avatars at approximate suburb level for the group view.
+The prior public `main` is preserved as tag **rollback-before-week3-demo**, commit `bb83d8c9651774f146e9312496b3010fa46a93c8`. No private development Git history was merged. To roll back, restore that tagged tree in a new commit on this public repository, test, push and redeploy only the demo project. Do not force-push or target the separate private application project.
 
-## Limits, honestly
-
-Availability and prices are not checked yet, and no court is ever booked by the app. Distances are straight-line between suburb reference points, not travel times. Player identity is a browser-stored credential, suitable for a prototype rather than production.
-
----
-
-Game On! by Agentdote · Made for your next rally
+Deployment target: **game-on-w3-demo**, repository **Game-on-LIVE**, branch **main**. No environment secrets are required. No new paid services or plan upgrade. Vercel/free tile usage remains subject to their quotas; actual bills are not measured by this repository.

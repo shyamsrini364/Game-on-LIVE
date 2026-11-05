@@ -5,11 +5,12 @@ from typing import Annotated, Literal, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
 
 from gameon.venues.contracts import VenuePreferences, VenueContext, VenueSearchResult, VenueRanking, Recommendation
+from .playbypoint_contracts import CourtObservation, CheckoutObservation, CheckoutInput
 
 Identifier = Annotated[str, Field(min_length=1, max_length=128, pattern=r'^[A-Za-z0-9_-]+$')]
 Text = Annotated[str, Field(min_length=1, max_length=600)]
 Action = Literal['WAIT', 'REQUEST_ALTERNATIVES', 'PROCEED_TO_DISCOVERY', 'REQUEST_HELP', 'ERROR']
-ToolName = Literal['read_game', 'schedule_game', 'discover_courts', 'search_pickleball_venues', 'rank_venues']
+ToolName = Literal['read_game', 'schedule_game', 'discover_courts', 'search_pickleball_venues', 'rank_venues', 'get_court_options', 'prepare_checkout']
 
 
 class Contract(BaseModel):
@@ -129,14 +130,15 @@ class Decision(Contract):
     kind: Literal['tool', 'finish']
     reason: Text
     tool: ToolName | None = None
-    arguments: ReadInput | ScheduleInput | DiscoveryInput | VenueSearchInput | RankVenuesInput | None = None
+    arguments: ReadInput | ScheduleInput | DiscoveryInput | VenueSearchInput | RankVenuesInput | CheckoutInput | None = None
     action: Action | None = None
 
     @model_validator(mode='after')
     def shape(self):
         if self.kind == 'tool':
             expected = {'read_game': ReadInput, 'schedule_game': ScheduleInput, 'discover_courts': DiscoveryInput,
-                        'search_pickleball_venues': VenueSearchInput, 'rank_venues': RankVenuesInput}
+                        'search_pickleball_venues': VenueSearchInput, 'rank_venues': RankVenuesInput,
+                        'get_court_options': DiscoveryInput, 'prepare_checkout': CheckoutInput}
             if self.tool not in expected or type(self.arguments) is not expected[self.tool] or self.action is not None:
                 raise ValueError('Invalid tool decision')
         elif self.action is None or self.tool is not None or self.arguments is not None:
@@ -209,7 +211,7 @@ class Evidence(Contract):
     evidence_id: Identifier
     observed_at: AwareDatetime
     source: ToolName
-    payload: Snapshot | ScheduleObservation | DiscoveryObservation | ToolFailure | VenueSearchResult | VenueRanking
+    payload: Snapshot | ScheduleObservation | DiscoveryObservation | ToolFailure | VenueSearchResult | VenueRanking | CourtObservation | CheckoutObservation
     simulated: bool = False
 
 

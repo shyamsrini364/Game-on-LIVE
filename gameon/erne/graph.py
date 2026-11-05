@@ -22,15 +22,18 @@ from .contracts import (AgentState, RunRequest, Snapshot, DiscoveryObservation,
 from .providers import DeterministicTestProvider, select
 from .openai_provider import OpenAIResponsesProvider, ProviderError
 from .policy import permitted_options
+from .playbypoint import PlaybypointSkill
+from .playbypoint_contracts import CourtObservation, CheckoutObservation
 from .tools import read_game, schedule_game, eligible_slots, validate_schedule, TransientToolError
 
 
 def discovery_status(history, configured):
-    results = [e.payload for e in history if e.source in ('discover_courts', 'search_pickleball_venues')]
-    if any(isinstance(d, (DiscoveryObservation, VenueSearchResult)) and d.status == 'results' for d in results):
+    results = [e.payload for e in history if e.source in ('discover_courts', 'search_pickleball_venues', 'get_court_options')]
+    if any(isinstance(d, (DiscoveryObservation, VenueSearchResult, CourtObservation)) and d.status == 'results' for d in results):
         return 'results'
     if results:
-        return results[-1].status if isinstance(results[-1], (DiscoveryObservation, VenueSearchResult)) else 'error'
+        status = getattr(results[-1], 'status', None)
+        return status if status in ('results', 'empty', 'unavailable') else 'error'
     return 'not_attempted' if configured else 'not_configured'
 
 
@@ -38,6 +41,7 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
     deadline = deadline if deadline is not None else time.monotonic() + request.deadline_seconds
     trace = []
     venue_mode = isinstance(discovery, CuratedDirectory)
+    browser = discovery if isinstance(discovery, PlaybypointSkill) else None
     inference_calls = {}
     is_responses = isinstance(provider, OpenAIResponsesProvider)
     default_source = ('llm' if provider.transport is None else 'mock') if is_responses else (
@@ -68,10 +72,10 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
         context = DecisionRequest(decision_id=secrets.token_hex(16), run_id=run_id,
             game_id=request.game_id, snapshot_id=snapshot.snapshot_id if snapshot else None,
             preferred_slot_id=request.preferred_slot_id,
-            observations=state['observations'], options=permitted_options(state, request, discovery is not None, venue_mode),
+            observations=state['observations'], options=permitted_options(state, request, discovery is not None, venue_mode, browser),
             eligible_slot_ids=eligible_slots(snapshot, state['schedule']),
             remaining_decisions=request.max_iterations-state['iteration'],
-            remaining_discovery_attempts=max(0, 2-state['attempts'].get('discover_courts', 0)-state['attempts'].get('search_pickleball_venues', 0)),
+            remaining_discovery_attempts=max(0, 2-state['attempts'].get('discover_courts', 0)-state['attempts'].get('search_pickleball_venues', 0)-state['attempts'].get('get_court_options', 0)),
             remaining_seconds=max(0.0, deadline-time.monotonic()))
         source = 'policy' if is_responses and len(context.options) == 1 else default_source
         try:
@@ -84,7 +88,7 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
                 raise ValueError('Invalid evidence references')
             if selection.reason_code != decision.reason_code:
                 raise ValueError('Reason code incompatible with option')
-            if decision not in permitted_options(state, request, discovery is not None, venue_mode):
+            if decision not in permitted_options(state, request, discovery is not None, venue_mode, browser):
                 raise ValueError('State changed during decision')
         except Exception as error:
             code = str(error) if isinstance(error, ProviderError) else 'invalid_decision'
@@ -101,12 +105,13 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
     def execute(state):
         decision = state['decision']
         name = decision.tool
-        if decision not in permitted_options(state, request, discovery is not None, venue_mode):
+        if decision not in permitted_options(state, request, discovery is not None, venue_mode, browser):
             return {'error': 'state_changed'}
         attempts = {**state['attempts'], name: state['attempts'].get(name, 0) + 1}
-        if attempts[name] > (2 if name in ('read_game', 'discover_courts', 'search_pickleball_venues') else 1):
+        if attempts[name] > (2 if name in ('read_game', 'discover_courts', 'search_pickleball_venues', 'get_court_options') else 1):
             return {'error': 'retry_limit'}
-        record(state, 'tool', name, 'Execute validated read-only tool.', name == 'discover_courts', option_id=decision.option_id)
+        simulated_tool = name in ('discover_courts', 'prepare_checkout') or (name == 'get_court_options' and browser.live_observations is None)
+        record(state, 'tool', name, 'Execute validated read-only tool.', simulated_tool, option_id=decision.option_id)
         stage(name, state['iteration'])
         try:
             if name == 'read_game':
@@ -114,6 +119,8 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
                          if venue_mode else read_game(store, decision.arguments))
             elif name == 'schedule_game':
                 value = schedule_game(state['snapshot'], decision.arguments)
+            elif name in ('get_court_options', 'prepare_checkout'):
+                value = getattr(browser, name)(decision.arguments, state['snapshot'], state['schedule'])
             elif name == 'search_pickleball_venues':
                 value = discovery.search(decision.arguments, state['snapshot'], state['schedule'])
             elif name == 'rank_venues':
@@ -169,6 +176,20 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
                     raise ValueError('Untrusted venue output')
                 count = len(value.venues) if name == 'search_pickleball_venues' else len(value.recommendations)
                 return evidence(state, name, value, f'{count} source-verified venues; court availability not checked.')
+            if name in ('get_court_options', 'prepare_checkout'):
+                cls = CourtObservation if name == 'get_court_options' else CheckoutObservation
+                value = cls.model_validate(state['tool_result'])
+                args = state['decision'].arguments
+                if value.snapshot_id != args.snapshot_id or value.slot_id != args.slot_id:
+                    raise ValueError('Browser scope mismatch')
+                if isinstance(value, CourtObservation):
+                    slot = next(s for s in state['snapshot'].slots if s.id == args.slot_id)
+                    if value.revision != browser.revision or value.venue_id != browser.venue_id or not value.fresh():
+                        raise ValueError('Invalid browser observation')
+                    if any(o.starts_at != slot.starts_at or o.ends_at != slot.ends_at for o in value.options):
+                        raise ValueError('Court time mismatch')
+                provenance = 'offline browser fixture' if value.simulated else 'previously observed live browser quote; inventory not guaranteed'
+                return evidence(state, name, value, f'{value.status}: {provenance}; not booked.')
             value = DiscoveryObservation.model_validate(state['tool_result'])
             args = state['decision'].arguments
             if value.snapshot_id != args.snapshot_id or value.slot_id != args.slot_id:
@@ -179,7 +200,7 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
             return {'error': 'invalid_observation', 'tool_result': None}
 
     def evidence(state, name, value, summary):
-        simulated = name == 'discover_courts'
+        simulated = name == 'discover_courts' or (name in ('get_court_options', 'prepare_checkout') and value.simulated)
         evidence_id = record(state, 'observation', name, summary, simulated,
                              option_id=state['decision'].option_id)
         item = Evidence(evidence_id=evidence_id, observed_at=datetime.now(timezone.utc),
@@ -190,7 +211,7 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
     def finalize(state):
         error = state['error']
         # Re-evaluate expiry/gates immediately before returning an action.
-        if not error and state['decision'] not in permitted_options(state, request, discovery is not None, venue_mode):
+        if not error and state['decision'] not in permitted_options(state, request, discovery is not None, venue_mode, browser):
             error = 'state_changed'
         if error:
             action = 'REQUEST_HELP' if error in ('iteration_limit', 'retry_limit', 'tool_unavailable', 'state_changed') else 'ERROR'
@@ -213,7 +234,7 @@ def _execute_graph(connection, request, store, provider, discovery, run_id, dead
         eligible = eligible_slots(snapshot, schedule)
         if schedule and schedule.status == 'ready' and not eligible:
             missing.append('New future time proposals needed')
-        simulated = state['attempts'].get('discover_courts', 0) > 0
+        simulated = state['attempts'].get('discover_courts', 0) > 0 or any(e.simulated for e in state['observations'])
         record(state, 'final', action, reason, simulated)
         return {'result': FinalResult(run_id=run_id, game_id=request.game_id, action=action,
             mode=request.mode, inference_calls=tuple(inference_calls.values()),
@@ -298,6 +319,8 @@ def run_erne(request, store, *, provider=None, discovery=None):
         return stopped('invalid_request')
     if (request.venue_preferences is not None) != isinstance(discovery, CuratedDirectory):
         return stopped('invalid_venue_configuration')
+    if isinstance(discovery, PlaybypointSkill) and os.environ.get('VERCEL'):
+        return stopped('local_browser_only')
     provider = provider if provider is not None else DeterministicTestProvider()
     if request.mode == 'llm':
         if not isinstance(provider, OpenAIResponsesProvider):
@@ -306,9 +329,16 @@ def run_erne(request, store, *, provider=None, discovery=None):
         return stopped('provider_not_supported')
     deadline = started + request.deadline_seconds
     stage_deadline, current_stage = deadline, None
-    ctx = multiprocessing.get_context('spawn')
-    receiver, sender = ctx.Pipe(duplex=False)
-    process = ctx.Process(target=_worker, args=(sender, request, store, provider, discovery, run_id, deadline), daemon=True)
+    if os.environ.get('VERCEL'):
+        # The approved hosted adapter validates its exact runtime profile before
+        # reaching this graph. Avoid spawn re-importing Vercel's handler as main.
+        from .subprocess_worker import prepare_worker
+        receiver, sender, process = prepare_worker(
+            (request, store, provider, discovery, run_id, deadline))
+    else:
+        ctx = multiprocessing.get_context('spawn')
+        receiver, sender = ctx.Pipe(duplex=False)
+        process = ctx.Process(target=_worker, args=(sender, request, store, provider, discovery, run_id, deadline), daemon=True)
     try:
         process.start()
         sender.close()

@@ -169,6 +169,7 @@ details.fold[open]>summary{margin-bottom:8px}
 .human-avatar{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .court-player strong{position:relative;margin-top:-10%;font-size:12px;line-height:1.2;max-width:160%;padding:3px 8px;border-radius:8px;background:var(--navy);color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avatar-status{font-size:10px;font-weight:700;line-height:1.2;padding:2px 6px;border-radius:8px;background:#0b2c50cc;color:#d6e4ee;white-space:nowrap}
+.avatar-status.organiser{background:var(--lime);color:var(--navy)}
 .court-caption{padding:14px 20px 16px;background:linear-gradient(180deg,#0b2c50,#082340)}
 .court-count{color:white;font-size:22px;margin:0 0 2px}
 .court-count strong{color:var(--lime);font-weight:850}
@@ -244,11 +245,12 @@ details.fold[open]>summary{margin-bottom:8px}
 
 /* Booking handoff */
 #handoff-panel{border:2px solid var(--teal)}
-.handoff-venue{font-size:20px;margin:6px 0 10px}
-.handoff-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}
-.handoff-summary div{background:#f0f5f8;border-radius:var(--radius-sm);padding:10px 12px;min-width:0}
-.handoff-summary dt{font-size:12px;color:var(--muted)}
-.handoff-summary dd{margin:2px 0 0;font-weight:750;font-size:14px;overflow-wrap:anywhere}
+.handoff-venue{font-size:20px;margin:6px 0 4px}
+.handoff-address{margin:0 0 12px;color:var(--muted);overflow-wrap:anywhere}
+.handoff-summary{margin:0;font-size:14px}
+.handoff-summary p{margin:4px 0;overflow-wrap:anywhere}
+#handoff-panel .share-actions{margin-top:14px}
+#handoff-next{background:var(--pale-teal,#eaf6f0);border-radius:var(--radius-sm);padding:14px}
 #handoff-status{font-weight:700;color:var(--teal-dark);margin:12px 0 0}
 #handoff-status:empty{display:none}
 #handoff-brief{font-size:13px;line-height:1.6;resize:vertical;margin-top:6px;background:#f8fafb}
@@ -333,7 +335,6 @@ details.fold[open]>summary{margin-bottom:8px}
   .street-map{height:340px}
   .venue-card{padding:12px 14px 12px 52px}
   .venue-art{left:12px;top:12px}
-  .handoff-summary{grid-template-columns:minmax(0,1fr)}
   .ernie-card{flex-wrap:wrap}.ernie-card button{width:100%}
   .ernie-tip img{width:72px}
   .how-it-works{grid-template-columns:minmax(0,1fr);gap:8px}
@@ -349,3 +350,109 @@ details.fold[open]>summary{margin-bottom:8px}
   .topbar nav a{padding:8px 7px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* I-042: existing Concept C, with visible planning and suburb-only group context. */
+body:has(#home-view:not([hidden])){display:flex;flex-direction:column}
+body:has(#home-view:not([hidden])) main{padding-bottom:36px;flex:1;width:100%}
+@media(min-width:701px){body:has(#home-view:not([hidden])) .home-hero{min-height:clamp(360px,calc(100dvh - 350px),580px)}}
+.home-hero{background:var(--navy);border-radius:24px;padding:30px;gap:28px;margin-bottom:20px}
+.home-hero h1,.home-hero .eyebrow{color:white}.home-hero h1 em{color:var(--lime)}
+.home-hero .intro{color:#d6e4ee}.home-hero h1{font-size:clamp(36px,5vw,64px)}
+.human-avatar{object-fit:contain;border-radius:0;padding:7%;background:transparent}
+.avatar-ring{padding:1px;flex-shrink:0}.avatar-choice .human-avatar{object-fit:contain}
+.court-spot .court-player{align-self:flex-start}.court-player>strong,.court-player>.avatar-status{flex-shrink:0}
+.planner-heading{display:flex;align-items:center;gap:12px}.planner-heading img{width:84px;height:auto}
+#planning-output:not(:has(.erne-plan-result:empty)){margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.venue-card.plan-card{margin:12px 0;padding:16px}.plan-selection{font-weight:750;color:var(--teal-dark)}
+.plan-alternatives{display:grid;gap:12px}.erne-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.erne-plan{width:100%;margin:10px 0}.erne-activities{padding-left:22px;font-size:13px}
+.map-players{display:flex;gap:4px}.map-player{width:54px;text-align:center;background:white;border:2px solid var(--teal);border-radius:16px;padding:2px;box-shadow:0 2px 8px #08234044}
+.map-player .human-avatar{width:46px;height:46px}.map-player span{display:block;font:700 10px Inter,sans-serif;max-width:50px;overflow:hidden;text-overflow:ellipsis}
+.meeting-marker{width:82px;height:82px;border:3px dashed var(--teal);border-radius:50%;background:#007f7910;pointer-events:none}
+.map-players{z-index:2}.meeting-marker{z-index:1}
+.street-map .top-venue-marker{z-index:4;background:var(--lime)!important;color:var(--navy)!important;border:3px solid var(--teal)!important}
+.street-map .alternative-venue-marker{z-index:3;background:var(--navy)!important;color:white!important}
+.alternative-venue-marker{background:var(--navy);color:white}.area-marker[aria-pressed=true]{outline:3px solid var(--teal);outline-offset:3px}
+#group-map .street-map{height:340px}#handoff-next{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+@media(max-width:700px){.home-hero{padding:20px}.home-hero .hero-art{order:0}#group-map .street-map{height:300px}.map-player{width:46px}.map-player .human-avatar{width:38px;height:38px}.avatar-status{display:block;font-size:9px}}
+
+/* I-043: one concise recommendation, with diagnostics kept in development evidence. */
+#planning-entry:has(.erne-planning:not([hidden])){margin:12px 0;padding:14px 18px;border:1px solid var(--mint-line);border-radius:16px;background:var(--mint)}
+#planning-entry .erne-planning{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:0;padding:0}
+.planning-intro{display:flex;align-items:center;gap:12px;flex:1;min-width:200px}.planning-intro img{width:74px;height:auto}
+.planning-intro p{margin:0;font-size:14px}.planning-intro strong{display:block}
+.planning-controls:has(.view-plan:not([hidden])){flex-wrap:nowrap}.view-plan{font-size:14px}.run-plan-again{flex-shrink:0}
+#planning-entry .erne-plan{width:auto;margin:0}.planning-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#planning-entry .small:empty{display:none}#planning-entry:has(.view-plan:not([hidden])){padding:8px 14px}
+.plan-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.plan-metric{background:var(--teal-soft);border-radius:12px;padding:14px 12px;min-width:0}
+.plan-metric strong{display:block;font-size:clamp(22px,2.4vw,30px);line-height:1.2;color:var(--teal-dark)}
+.plan-metric span{display:block;font-size:13px;margin-top:4px}
+.plan-card .plan-estimates{font-size:13px;color:var(--muted)}
+.plan-card .plan-status{margin:12px 0;line-height:1.7;background:var(--notice);padding:10px 12px;border-radius:12px}
+.plan-alternative .plan-metrics{margin:10px 0}.plan-alternative .plan-metric{padding:8px 10px}.plan-alternative .plan-metric strong{font-size:21px}
+.plan-selection:empty{display:none}.plan-selection{font-size:14px;margin:10px 0}.plan-card .eyebrow{font-size:12px}
+#planning-output:not(:has(.erne-plan-result:empty)){padding-top:0;border-top:0}
+@media(max-width:700px){#planning-entry .erne-plan{width:100%}.planning-controls{width:100%}.planning-intro img{width:60px}.plan-metric{padding:12px 10px}}
+.account-name { display: inline-flex; align-items: center; gap: .35rem; }
+.account-name .human-avatar { width: 28px; height: 28px; object-fit: contain; }
+.has-account nav .text-button { color: white; white-space: nowrap; }
+.account-name { max-width: 160px; overflow: hidden; white-space: nowrap; }
+.login-panel { max-width: 560px; margin: 0 auto; }
+@media(max-width:600px) {
+  .topbar.has-account { flex-wrap: wrap; gap: .5rem; }
+  .topbar.has-account nav { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+  .account-name { max-width: 110px; }
+}
+
+.court-pricing { margin: .75rem 0; padding: .75rem; background: #eef8f4; border-radius: 10px; overflow-wrap: anywhere; }
+.court-pricing p { margin: .3rem 0; }
+.court-price-total { display: block; font-size: 1.15rem; color: #0c2d50; }
+/* Court selection and handoff views: presentation only. */
+#game-steps li { padding:0; }
+#game-steps li button { display:flex; align-items:center; gap:8px; width:100%; min-height:48px; border:0; background:transparent; color:inherit; padding:10px; text-align:left; }
+#game-view[data-step=court] .workspace,#game-view[data-step=handoff] .workspace { grid-template-columns:minmax(0,1fr); }
+#game-view[data-step=court] .workspace-side:not(.expanded),#game-view[data-step=handoff] .workspace-side:not(.expanded){display:none}
+.coordination-summary { margin-bottom:16px; text-align:left; }
+#game-view[data-step=court] { padding-bottom:180px; }
+#game-view[data-step=handoff] .game-share{display:none}
+#court-map-details { margin:16px 0; } #court-map-details>summary { min-height:44px; cursor:pointer; font-weight:700; }
+.court-options { display:grid; gap:16px; }
+.venue-card.plan-card { position:relative; padding:20px; margin:0; border:2px solid #b8cbd4; background:white; transition:box-shadow 150ms,background 150ms; cursor:pointer; }
+.plan-card[aria-checked=true] { border-color:#007f79; background:#eff9f5; box-shadow:0 3px 12px #007f7920; }
+.plan-card:focus-visible { outline:3px solid #0b2c50; outline-offset:3px; }
+.plan-card h3 { padding-right:40px; font-size:20px; }
+.choice-circle { position:absolute; right:20px; top:20px; width:28px; height:28px; border:2px solid #647b89; border-radius:50%; display:grid; place-items:center; }
+[aria-checked=true]>.choice-circle { background:#007f79; color:white; border-color:#007f79; font-weight:900; }
+.court-pricing .court-identity { display:table; font-size:1rem; font-weight:700; color:#005e59; background:#d9eeea; border:1px solid #b4d8d0; border-radius:6px; padding:5px 9px; }
+.court-price-total { display:table; font-size:1.1rem; font-weight:750; line-height:1.4; background:#e4ff91; border-left:3px solid #007f79; border-radius:6px; padding:6px 10px; margin:8px 0; }
+.court-address,.handoff-address { font-size:17px; font-weight:700; color:#0b2c50; border-left:4px solid #007f79; padding:8px 12px; background:#eaf3f5; }
+.price-details { font-size:13px; margin-top:12px; }.price-details summary { min-height:44px; cursor:pointer; display:list-item; padding:10px 0; }
+.distance-chips { font-size:14px; background:#eaf3f5; padding:8px; border-radius:8px; }
+.court-action-bar { position:fixed; bottom:0; left:0; right:0; z-index:90; background:#e4ff91; border-top:2px solid #007f79; box-shadow:0 -4px 20px #0b2c5018; padding:16px max(16px,calc((100vw - 1160px)/2)); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.court-action-bar>strong { flex:1; min-width:200px; }.court-action-bar>p:empty{display:none}.court-action-bar>p{width:100%;margin:0}
+.court-action-bar .primary { background:#007f79;color:white; }.court-action-bar button {min-height:44px}
+.court-compare { width:min(960px,95vw); max-height:85dvh; border:2px solid #007f79; border-radius:16px; padding:20px; color:#0b2c50; }
+.court-compare::backdrop { background:#0b2c5080; }.comparison-scroll{overflow:auto;margin-top:16px}.court-compare th,.court-compare td {padding:12px;text-align:left;border-bottom:1px solid #b8cbd4;}.court-compare button{min-height:44px}
+.handoff-avatars {display:flex;gap:8px;margin:16px 0}.handoff-avatars img{width:48px;height:48px}
+#handoff-calendar{margin-top:16px;min-height:44px}#change-court{min-height:44px}
+#game-view[data-step=court] ~ .ernie-widget{bottom:180px}
+body:has(.court-action-bar:not([hidden])) .ernie-widget{bottom:170px}
+.street-map .area-marker[aria-pressed=true]{background:#007f79!important;color:white!important}
+.street-map .area-marker[aria-pressed=true]::after{content:'\2713';position:absolute;top:-8px;right:-8px;background:#007f79;color:white;border-radius:50%;width:20px;height:20px;font-size:14px}
+@media(max-width:700px){#game-steps li button{flex-direction:column;font-size:11px;gap:4px;padding:8px 4px}.court-action-bar{gap:8px;padding:12px 16px}.court-action-bar>strong{flex-basis:100%;font-size:14px}.court-action-bar .share-actions{width:100%;}.court-action-bar .primary{flex:1}.venue-card.plan-card{padding:16px}#game-view[data-step=court]{padding-bottom:210px}#group-map .street-map{height:240px}}
+
+#game-view[data-step=court]{padding-bottom:max(210px,var(--court-bar-height,210px))}
+#handoff-open.primary{background:#007f79;color:white}
+.handoff-avatars .human-avatar{padding:0;width:48px;height:48px;object-fit:contain}
+/* I-063: completed-run activity, with no fabricated progress animation. */
+.game-plan{margin:16px 0;padding:16px 20px;background:#eff8f4;border:1px solid #a5d4c4;border-radius:16px;color:#0b2c50}
+.game-plan-heading{display:flex;align-items:center;gap:12px}.game-plan-heading img{width:64px;height:auto}.game-plan-heading h2{font-size:21px;margin:0}
+.game-plan-state{margin:8px 0;font-weight:650}.game-plan summary{min-height:44px;padding:10px 0;cursor:pointer;font-weight:700}
+.game-plan-events{padding-left:24px;margin:8px 0}.game-plan-events li{padding:8px 12px;border-left:3px solid #93b7b1;margin:8px 0}.game-plan-events p{margin:4px 0;font-size:14px}.game-plan-events small{color:#41596c}
+.game-plan-events [data-stage=replanning]{border-color:#9a6300;background:#fff5df;border-radius:8px}.game-plan-events [data-status=failed]{border-color:#9a6300}
+.game-plan[data-state=running]{border-color:#007f79}.game-plan[data-state=failed],.game-plan[data-state=outdated]{background:#fff5df}
+@media(max-width:700px){.game-plan{padding:14px}.game-plan-heading h2{font-size:19px}.game-plan-events{padding-left:20px}}
+
+.handoff-recovery { margin:16px 0; padding:10px 12px; background:#fff5df; border-radius:8px; }
+.handoff-recovery summary { cursor:pointer; min-height:44px; padding:10px 0; font-weight:700; }

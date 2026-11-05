@@ -1,4 +1,0 @@
-# Optional local harness; not installed by Vercel requirements.txt.
--r requirements.txt
-langgraph==1.2.19
-pydantic==2.14.2

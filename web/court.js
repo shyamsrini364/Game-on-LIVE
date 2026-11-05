@@ -46,6 +46,10 @@ window.GameOnUI = (() => {
     const name = document.createElement('strong'); name.textContent = person.name;
     const status = document.createElement('span'); status.className = 'avatar-status';
     status.textContent = isGame ? (person.has_voted ? '✓ Voted' : 'Not voted yet') : (person.role === 'owner' ? 'Organiser' : 'Member');
+    if (isGame && person.role === 'owner') {
+      status.classList.add('organiser');
+      status.textContent = `Organiser · ${status.textContent}`;
+    }
     item.append(portrait, name, status); return item;
   }
   function renderCourt(root, people, {game=false, ready=false, minPlayers=4} = {}) {
@@ -56,6 +60,8 @@ window.GameOnUI = (() => {
     root.replaceChildren(); root.className = 'crew-court' + (ready ? ' court-ready' : '');
     const stage = document.createElement('div'); stage.className = 'court-stage';
     const art = document.createElement('img'); art.className = 'court-art'; art.src = '/assets/court/court-empty.webp';
+    stage.dataset.populated = String(people.length > 0);
+    stage.setAttribute('aria-label', people.length ? 'Your joined crew on court' : 'Empty court — no players have joined');
     art.alt = ''; art.width = 1400; art.height = 700; art.decoding = 'async';
     const spots = document.createElement('div'); spots.className = 'court-spots';
     spots.setAttribute('role', 'list'); spots.setAttribute('aria-label', game ? 'Players in this game' : 'Group members');
@@ -75,7 +81,7 @@ window.GameOnUI = (() => {
     }
     const note = document.createElement('p'); note.className = 'court-guidance';
     note.textContent = game
-      ? (ready ? 'A shared time works. Next: choose a court.'
+      ? (ready ? 'A shared time works. Next: ask Ernie to find our court.'
         : people.length < minPlayers ? `${minPlayers - people.length} more player${minPlayers - people.length === 1 ? '' : 's'} to get this game going.`
         : pending ? `Waiting on ${pending} vote${pending === 1 ? '' : 's'}.`
         : 'Everyone has voted. See the times below.')
