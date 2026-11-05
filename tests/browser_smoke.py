@@ -15,6 +15,7 @@ with sync_playwright() as p:
    page.select_option('#scenario',scenario)
    expect(page.locator('#handoff-panel')).to_be_hidden()
    expect(page.locator('.court-action-bar')).to_have_count(0)
+   page.locator('#demo-start').click();page.locator('#demo-next').click();page.locator('#demo-next').click()
    with page.expect_response('**/api/demo/plan',timeout=45000) as response:page.locator('#run-demo').click()
    r=response.value.json();assert r['scenario']==scenario and r['stop_reason']=='completed'
    expect(page.locator('#ernie-game-plan')).to_have_attribute('data-run-id',r['run_id'])
@@ -45,6 +46,7 @@ with sync_playwright() as p:
    page.screenshot(path=str(out/f'{scenario}-{width}.png'),full_page=True)
   page.locator('#reset').click();expect(page.locator('.court-action-bar')).to_have_count(0)
   expect(page.locator('#ernie-game-plan')).to_be_hidden()
+  page.locator('#demo-start').click();page.locator('#demo-next').click();page.locator('#demo-next').click()
   with page.expect_response('**/api/demo/plan',timeout=45000):
    page.locator('#run-demo').click();page.locator('#reset').click()
   expect(page.locator('#ernie-game-plan')).to_be_hidden()

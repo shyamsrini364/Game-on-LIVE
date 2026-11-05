@@ -10,8 +10,8 @@ Verified without login on 6 November 2026 (Australia/Sydney). Separate Vercel pr
 
 No account, database setup or API key is required.
 
-1. Select a scenario in **Demo Studio** and click **Run Ernie**.
-2. Open **See what Ernie did** to inspect the completed execution record.
+1. Select a scenario in **Demo Studio** then **Start demo**. Follow **Crew ? Time ? Court** and click **Run Ernie**.
+2. Open **View Agent Brain** to step through the actual completed trace with Previous, Next, Replay and Reset replay. **Execution replay** is not live streaming. In B, inspect the first empty discovery and the second discovery for the next agreed time.
 3. Compare the court cards/map, then **Approve & continue** to the fictional handoff.
 4. Copy a privacy-safe brief to a personal assistant or download a tentative calendar event.
 5. Switch scenarios or **Reset** to start over. Each visitor's browser state is independent.
@@ -64,9 +64,10 @@ python -m venv .venv
 python -m pip install -r requirements-dev.txt
 python app.py
 # Open http://localhost:8020
-python -m unittest discover -s tests -p test_demo.py
+python -m unittest discover -s tests -p 'test_*.py'
 python -m playwright install chromium
 python tests/browser_smoke.py http://localhost:8020 --live-map
+python tests/browser_brain.py http://localhost:8020
 ```
 
 For an already installed Chromium, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to its executable path. Setting `VERCEL=1` when running the unit suite exercises the dedicated serverless subprocess launcher. The browser suite runs A/B/C/B/A and Reset at 1280/375 pixels, uses the real HTTP application and graph, and verifies comparison, approval, clipboard privacy, calendar and overflow. It never performs provider booking actions.
@@ -78,3 +79,14 @@ Nothing is reserved, held, paid or emailed. Opening an official website is ordin
 The prior public `main` is preserved as tag **rollback-before-week3-demo**, commit `bb83d8c9651774f146e9312496b3010fa46a93c8`. No private development Git history was merged. To roll back, restore that tagged tree in a new commit on this public repository, test, push and redeploy only the demo project. Do not force-push or target the separate private application project.
 
 Deployment target: **game-on-w3-demo**, repository **Game-on-LIVE**, branch **main**. No environment secrets are required. No new paid services or plan upgrade. Vercel/free tile usage remains subject to their quotas; actual bills are not measured by this repository.
+
+## Agent Brain evidence replay
+
+`graph_events.py` projects exactly one safe event per actual trace entry, preserving order, event/run IDs, iteration, decision source and simulation provenance. Only typed observation counts/status and allowlisted decision reason codes are exposed; free-form reasoning, prompts and internal errors are excluded. FINISH reports the actual terminal action. The SVG highlights the recorded node, with an explicit Observe-to-Decide loop. Replay never calls an API, changes approval or replaces the completed recommendation. Controls work with the keyboard; no automatic playback starts on load and no motion effects are required.
+
+Scenario B's first empty observation synchronises a Court evidence notice: **0 available courts for the first agreed time** (simulated). The completed recommendation remains scoped to the successful second time. Scenario C ends in REQUEST_HELP and cannot be approved. Scenario reset clears all replay state. Approval is a separate user action outside the graph and is not fabricated as a graph event.
+
+![B: actual empty observation](docs/screenshots/brain-B-1280.png)
+![B: mobile replay](docs/screenshots/brain-B-375.png)
+
+Rollback for this visualisation: restore public commit `bbc00e5cc2237970e3089583140be50014b943b1` in a new commit and deploy only `game-on-w3-demo`. This retains the initial fictional demo.

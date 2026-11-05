@@ -1,1 +1,12 @@
 .demo-studio{position:relative;margin:18px 0;padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}.demo-studio select{flex:1;min-width:220px}.demo-studio p{width:100%;margin:0}#scenario-label{font-weight:700;color:#005e59}.topbar>span{color:white}.game-share,#manual-exploration,#handoff-whatsapp,#handoff-share{display:none}.demo-evidence{padding:12px;background:#eef8f4;overflow-wrap:anywhere}#demo-error{color:#a32121}.demo-help{padding:20px;background:#fff5df;border-radius:12px}#planning-entry{padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}#planning-entry button{min-width:150px}@media(max-width:600px){.topbar>span{font-size:12px}.demo-studio select{min-width:0;width:100%;flex-basis:100%}}
+.agent-brain { margin:16px 0; border:1px solid #008780; }
+.agent-brain summary { color:#007e79; font-weight:700; cursor:pointer; }
+.agent-brain svg { width:100%; max-width:680px; display:block; margin:auto; color:#0d3054; }
+.agent-brain svg text { font-size:18px; fill:#0d3054; }
+.agent-brain [data-node] rect { fill:#e9f3f4; stroke:#008780; stroke-width:2; }
+.agent-brain [data-node] text { text-anchor:middle; font-weight:bold; }
+.agent-brain [data-node].active rect { fill:#d4ff32; stroke:#0d3054; stroke-width:4; }
+#brain-position { overflow-wrap:anywhere; }
+#brain-description,.brain-evidence { padding:12px; background:#eff8e0; border-left:4px solid #008780; margin:12px 0; }
+#demo-navigation { margin:12px 0; }
+@media (prefers-reduced-motion:reduce) { .agent-brain * { animation:none!important; transition:none!important; } }

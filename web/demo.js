@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-let currentGame={players:[],min_players:2},currentReady=true,selectedHandoff=null,generation=0,lastResult=null;
+let currentGame={players:[],min_players:2},currentReady=true,selectedHandoff=null,generation=0,lastResult=null,setupSlots=[];
 const Ernie={planAllowed:true,hasRecommendation:false,currentRevision:'A'};
 const labels={A:'Successful recommendation',B:'Unavailable court → replan',C:'No suitable alternatives → human help'};
 const timeLabel=s=>new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(s));
@@ -7,21 +7,21 @@ function clearHandoff(){selectedHandoff=null;$('#handoff-panel').hidden=true;}
 function text(id,value){$(id).textContent=value;}
 async function api(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw Error('Demo could not complete this action. Reset or try again.');return r.json();}
 function reset(){
- generation++;lastResult=null;clearHandoff();Ernie.hasRecommendation=false;Ernie.currentRevision=$('#scenario').value;
+ AgentBrain.clear();generation++;lastResult=null;clearHandoff();Ernie.hasRecommendation=false;Ernie.currentRevision=$('#scenario').value;
  CourtFlow.barObserver?.disconnect();CourtFlow.bar?.remove();CourtFlow.dialog?.remove();ErnieGamePlan.clear();
  VenueView.dispose($('#group-map'));$('#group-map').replaceChildren();$('#planning-output').replaceChildren();
  $('#run-demo').disabled=false;text('#demo-error','');text('#scenario-label',`Scenario ${$('#scenario').value} — ${labels[$('#scenario').value]} · SIMULATED`);
  text('#game-heading','Your fictional crew is ready.');text('#game-eyebrow','Fictional Demo Crew · Two players');
  currentGame.players=[{id:'alex',name:'Alex',suburb:'Clayton',avatar_id:'ace',is_organiser:true,voted:true},{id:'sam',name:'Sam',suburb:'Springvale',avatar_id:'sky',voted:true}];
  GameOnUI.renderCourt($('#session-court'),currentGame.players,{game:true,ready:true,minPlayers:2});
- text('#rankings','Alex and Sam have both approved two future evening times. Run Ernie to see the exact dates.');
+ text('#rankings',setupSlots.length?setupSlots.map(s=>timeLabel(s.starts_at)+' - both fictional players available').join(' / '):'Alex and Sam have both approved two future evening times. Run Ernie to see the exact dates.');
  text('#player-count','2 fictional players');text('#status','All fictional votes submitted');text('#game-duration-label','Singles · 60 minutes · Melbourne time');
- history.replaceState(null,'','/?step=court');CourtFlow.update();
+ history.replaceState(null,'','/?step=home');CourtFlow.update();
 }
 async function plan(){
- const g=++generation,scenario=$('#scenario').value;$('#run-demo').disabled=true;text('#demo-error','');clearHandoff();Ernie.hasRecommendation=false;CourtFlow.bar?.remove();CourtFlow.dialog?.remove();ErnieGamePlan.start();
+ const g=++generation,scenario=$('#scenario').value;$('#run-demo').disabled=true;text('#demo-error','');clearHandoff();Ernie.hasRecommendation=false;CourtFlow.bar?.remove();CourtFlow.dialog?.remove();AgentBrain.clear();ErnieGamePlan.start();
  try{const result=await api('/api/demo/plan',{scenario});if(g!==generation)return;
- lastResult=result;Ernie.currentRevision=scenario;ErnieGamePlan.finish(result);Ernie.hasRecommendation=!!result.recommendations.length;
+ AgentBrain.load(result);lastResult=result;Ernie.currentRevision=scenario;ErnieGamePlan.finish(result);Ernie.hasRecommendation=!!result.recommendations.length;
  $('#planning-output').replaceChildren();CourtFlow.bar?.remove();CourtFlow.dialog?.remove();
  text('#rankings',result.slots.map(s=>`${timeLabel(s.starts_at)} — both players available`).join(' / '));
  if(result.recommendations.length){
@@ -47,8 +47,14 @@ $('#join-panel').remove();$('#vote-panel').remove();$('.game-share').remove();$(
 $('#planning-entry').innerHTML='<div><strong>Ernie · AI assistant demo</strong><p class="small">Bounded LangGraph with built-in decisions and simulated inventory.</p><p id="demo-error" role="alert"></p></div><button id="run-demo" class="primary" type="button">Run Ernie</button>';
 text('#share-note','Fictional accounts and votes only. No personal registration or invitations.');
 text('#next-step','These are fixed fictional votes. Reset restores the demonstration; no shared data is changed.');
-CourtFlow.init();ErnieGamePlan.init();$('#run-demo').onclick=plan;$('#reset').onclick=reset;$('#scenario').onchange=reset;
+CourtFlow.init();ErnieGamePlan.init();AgentBrain.init();$('#run-demo').onclick=plan;$('#reset').onclick=reset;$('#scenario').onchange=reset;
 $('#handoff-copy').onclick=copyBrief;$('#handoff-calendar').onclick=downloadCalendar;
 $('#handoff-open').onclick=()=>{if(!selectedHandoff)return;const url=selectedHandoff.venue.booking_url||selectedHandoff.venue.website_url;window.open(url,'_blank','noopener,noreferrer');$('#handoff-next').hidden=false;text('#handoff-next-title','Demo handoff complete — nothing booked');text('#handoff-next-description','The official website opens without prefilled court/time. Stop before any hold, reservation or payment during this demonstration.');};
 $('#handoff-next a').onclick=e=>{e.preventDefault();CourtFlow.go('court');};
 reset();
+
+$('#demo-start').onclick=()=>CourtFlow.go('crew');
+$('#demo-home-button').onclick=()=>CourtFlow.go('home');
+$('#demo-next').onclick=()=>CourtFlow.go(CourtFlow.step==='crew'?'time':'court');
+
+fetch('/api/demo/setup').then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{setupSlots=data.slots;if(!lastResult)text('#rankings',data.slots.map(s=>timeLabel(s.starts_at)+' - both fictional players available').join(' / '));}).catch(()=>{});

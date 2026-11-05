@@ -6,7 +6,7 @@ from threading import BoundedSemaphore
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
-from demo_runtime import run_demo, fixture_day
+from demo_runtime import run_demo, fixture_day, DemoStore
 
 app=FastAPI(title='Game On Week 3 fictional demo',docs_url=None,redoc_url=None,openapi_url=None)
 capacity=BoundedSemaphore(2)
@@ -43,6 +43,11 @@ def health(): return dict(status='ok',demo=True,database='none',live_provider=Fa
 
 @app.get('/api/map-config')
 def map_config(): return dict(enabled=True,style_url='https://tiles.openfreemap.org/styles/liberty',resource_origins=['https://tiles.openfreemap.org'])
+
+@app.get('/api/demo/setup')
+def setup():
+    game,_=DemoStore(fixture_day()).load_game_session('demo-game')
+    return dict(slots=[dict(starts_at=s.starts_at.isoformat(),ends_at=s.ends_at.isoformat()) for s in game.slots])
 
 @app.post('/api/demo/plan')
 def plan(body: Plan): return execute(body.scenario)
